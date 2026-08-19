@@ -1,0 +1,34 @@
+{
+  "name": "ecossistema-inovacao",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sistema de Gestão do Ecossistema de Inovação — Centro de Inovação",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "db:reset": "supabase db reset",
+    "db:testar": "./scripts/testar-banco.sh",
+    "db:tipos": "supabase gen types typescript --local > lib/tipos-banco.ts",
+    "test:dominio": "node --import tsx --test tests/dominio.test.ts"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.5.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "next": "14.2.15",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "@types/react": "^18.3.11",
+    "@types/react-dom": "^18.3.0",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "14.2.15",
+    "tsx": "^4.23.12",
+    "typescript": "^5.6.3"
+  }
+}

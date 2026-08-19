@@ -1,0 +1,71 @@
+name: Banco de dados
+
+# Aplica as migrations num Postgres limpo e roda os testes de regra de negócio.
+# Qualquer PR que quebre uma constraint ou mude o cálculo de um indicador falha aqui.
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['supabase/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
+  pull_request:
+    paths: ['supabase/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
+
+jobs:
+  migrations-e-testes:
+    name: Migrations + testes de regra de negócio
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_DB: postgres
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Instalar o cliente do Postgres
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client
+
+      - name: Aplicar migrations, seed e rodar os testes
+        env:
+          PGHOST: localhost
+          PGPORT: '5432'
+          PGUSER: postgres
+          PGPASSWORD: postgres
+          BANCO: ecossistema_ci
+          STUB: '1'          # Postgres puro no runner: precisa do auth.uid() falso
+        run: ./scripts/testar-banco.sh
+
+  ordem-das-migrations:
+    name: Migrations em ordem e sem duplicata
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Conferir nomes e ordem
+        run: |
+          cd supabase/migrations
+          # todo arquivo precisa começar com timestamp de 14 dígitos
+          for f in *.sql; do
+            if ! echo "$f" | grep -qE '^[0-9]{14}_[a-z0-9_]+\.sql$'; then
+              echo "::error::nome fora do padrão: $f (use 20260820090000_descricao.sql)"
+              exit 1
+            fi
+          done
+          # nenhum timestamp repetido
+          if ls *.sql | cut -c1-14 | sort | uniq -d | grep -q .; then
+            echo "::error::há migrations com o mesmo timestamp"
+            ls *.sql | cut -c1-14 | sort | uniq -d
+            exit 1
+          fi
+          echo "migrations OK: $(ls *.sql | wc -l) arquivo(s)"

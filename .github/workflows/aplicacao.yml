@@ -1,0 +1,73 @@
+name: Aplicação
+
+# Roda quando o front-end existir no repositório. Enquanto não houver
+# package.json, o job encerra sem erro em vez de quebrar o quadro de status.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+jobs:
+  qualidade:
+    name: Lint, tipos e build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: A aplicação já existe?
+        id: existe
+        run: |
+          if [ -f package.json ]; then
+            echo "sim=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sim=false" >> "$GITHUB_OUTPUT"
+            echo "package.json ainda não existe — nada a verificar nesta etapa."
+          fi
+
+      - uses: actions/setup-node@v4
+        if: steps.existe.outputs.sim == 'true'
+        with:
+          node-version: '20'
+          cache: npm
+
+      - if: steps.existe.outputs.sim == 'true'
+        run: npm ci
+
+      - if: steps.existe.outputs.sim == 'true'
+        run: npm run lint --if-present
+
+      - if: steps.existe.outputs.sim == 'true'
+        run: npm run typecheck --if-present
+
+      - if: steps.existe.outputs.sim == 'true'
+        run: npm run test:dominio --if-present
+
+      - if: steps.existe.outputs.sim == 'true'
+        env:
+          # Valores de fachada: o build não conecta no Supabase, só precisa que
+          # as variáveis existam para não quebrar na coleta de rotas.
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: build
+          SUPABASE_SERVICE_ROLE_KEY: build
+        run: npm run build --if-present
+
+  chave-secreta-no-cliente:
+    name: Service role fora do código de cliente
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Procurar SUPABASE_SERVICE_ROLE_KEY em arquivo "use client"
+        run: |
+          falhou=0
+          while IFS= read -r arquivo; do
+            if head -5 "$arquivo" | grep -q "use client"; then
+              if grep -q "SUPABASE_SERVICE_ROLE_KEY\|supabase/admin" "$arquivo"; then
+                echo "::error file=$arquivo::service role referenciada em componente de cliente"
+                falhou=1
+              fi
+            fi
+          done < <(find . -path ./node_modules -prune -o \( -name '*.ts' -o -name '*.tsx' \) -print)
+          if [ "$falhou" = "1" ]; then exit 1; fi
+          echo "nenhuma referência à service role em código de cliente"
+
