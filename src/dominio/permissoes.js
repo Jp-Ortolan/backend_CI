@@ -9,7 +9,7 @@
  * nos dois lugares, sempre.
  */
 
-/** @typedef {import('../tipos-banco.js').PapelUsuario} Papel */
+/** @typedef {import('./tipos.js').PapelUsuario} Papel */
 
 /**
  * @typedef {'instituicao'|'representante'|'vinculo'|'reuniao'

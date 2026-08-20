@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { consulta, consultaUm } from '../db/consulta.js';
-import { pode } from '../dominio/permissoes.js';
+import { consulta, consultaUm } from '@/infraestrutura/banco/consulta.js';
+import { pode } from '@/dominio/permissoes.js';
 import { DURACAO_SESSAO_HORAS, gerarToken, hashToken } from './tokens.js';
 
 export const COOKIE_SESSAO = 'sessao';
@@ -11,7 +11,7 @@ export const COOKIE_SESSAO = 'sessao';
  * @property {string} id
  * @property {string} nome
  * @property {string} email
- * @property {import('../dominio/permissoes.js').Papel} papel
+ * @property {import('@/dominio/permissoes.js').Papel} papel
  * @property {boolean} ativo
  */
 
@@ -85,8 +85,8 @@ export async function exigirUsuario(destino) {
 /**
  * Exige uma permissão específica. Use em Server Component ou Server Action.
  *
- * @param {import('../dominio/permissoes.js').Recurso} recurso
- * @param {import('../dominio/permissoes.js').Acao} acao
+ * @param {import('@/dominio/permissoes.js').Recurso} recurso
+ * @param {import('@/dominio/permissoes.js').Acao} acao
  * @returns {Promise<UsuarioSessao>}
  */
 export async function exigirPermissao(recurso, acao) {

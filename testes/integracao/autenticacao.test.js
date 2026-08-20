@@ -13,8 +13,8 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import pg from 'pg';
-import { gerarHash, conferir } from '../lib/auth/senha.js';
-import { gerarToken, hashToken } from '../lib/auth/tokens.js';
+import { gerarHash, conferir } from '../../src/infraestrutura/seguranca/senha.js';
+import { gerarToken, hashToken } from '../../src/infraestrutura/seguranca/tokens.js';
 
 const { Client } = pg;
 

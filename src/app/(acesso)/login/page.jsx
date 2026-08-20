@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { usuarioAtual } from '@/lib/auth/sessao.js';
+import { usuarioAtual } from '@/infraestrutura/seguranca/sessao.js';
 import { FormLogin } from '../formularios.jsx';
 
 export const dynamic = 'force-dynamic';

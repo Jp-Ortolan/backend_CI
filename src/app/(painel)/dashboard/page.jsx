@@ -1,6 +1,6 @@
-import { comUsuario } from '@/lib/db/consulta.js';
-import { exigirPermissao } from '@/lib/auth/sessao.js';
-import { ROTULO_PAPEL } from '@/lib/dominio/permissoes.js';
+import { comUsuario } from '@/infraestrutura/banco/consulta.js';
+import { exigirPermissao } from '@/infraestrutura/seguranca/sessao.js';
+import { ROTULO_PAPEL } from '@/dominio/permissoes.js';
 
 export const dynamic = 'force-dynamic';
 

@@ -1,5 +1,5 @@
-import { exigirUsuario } from '@/lib/auth/sessao.js';
-import { menuDoPapel, ROTULO_PAPEL } from '@/lib/dominio/permissoes.js';
+import { exigirUsuario } from '@/infraestrutura/seguranca/sessao.js';
+import { menuDoPapel, ROTULO_PAPEL } from '@/dominio/permissoes.js';
 
 /**
  * Moldura autenticada. Além do middleware, esta camada resolve o papel do

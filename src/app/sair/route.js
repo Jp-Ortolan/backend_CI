@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { encerrarSessao } from '@/lib/auth/sessao.js';
+import { encerrarSessao } from '@/infraestrutura/seguranca/sessao.js';
 
 /**
  * @param {import('next/server').NextRequest} req

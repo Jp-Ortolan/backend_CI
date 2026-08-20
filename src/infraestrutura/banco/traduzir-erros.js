@@ -1,4 +1,4 @@
-import { ErroDeNegocio } from './erros.js';
+import { ErroDeNegocio } from '@/dominio/erros.js';
 
 /**
  * As funções de check-in no banco sinalizam problema levantando exceção com
@@ -7,7 +7,7 @@ import { ErroDeNegocio } from './erros.js';
  *
  * Ver docs/04-contrato-de-api.md
  *
- * @type {Record<string, [import('./erros.js').CodigoErro, string]>}
+ * @type {Record<string, [import('@/dominio/erros.js').CodigoErro, string]>}
  */
 const MAPA = {
   REUNIAO_NAO_ENCONTRADA: ['REUNIAO_NAO_ENCONTRADA',

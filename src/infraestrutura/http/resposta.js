@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { ErroDeNegocio, statusDoCodigo } from './erros.js';
+import { ErroDeNegocio, statusDoCodigo } from '@/dominio/erros.js';
 
 /**
  * Resposta de sucesso.

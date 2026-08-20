@@ -8,7 +8,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { pode, acoesDe, menuDoPapel, ROTULO_PAPEL } from '../lib/dominio/permissoes.js';
+import { pode, acoesDe, menuDoPapel, ROTULO_PAPEL } from '../../src/dominio/permissoes.js';
 
 test('admin pode tudo sobre instituição', () => {
   for (const a of ['ver', 'criar', 'editar', 'encerrar', 'excluir', 'exportar']) {

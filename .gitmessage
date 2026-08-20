@@ -1,0 +1,28 @@
+# <tipo>(<escopo>): <o que muda, no imperativo, em minúscula>
+#
+# Corpo: POR QUE mudou, não o que mudou (o diff já mostra o quê).
+#
+# Rodapé: BREAKING CHANGE: ... | Refs: RF15 | Closes #12
+#
+# ---------------------------------------------------------------------------
+# TIPOS
+#   feat      recurso novo para o usuário
+#   fix       correção de defeito
+#   refactor  muda o código sem mudar o comportamento
+#   perf      melhora desempenho
+#   docs      só documentação
+#   test      só teste
+#   chore     build, dependências, configuração
+#   ci        integração contínua
+#
+# ESCOPOS
+#   instituicoes  representantes  vinculos  reunioes  checkin  presenca
+#   dashboard     auth            banco     ci        estrutura
+#
+# EXEMPLOS
+#   feat(vinculos): encerrar vínculo mantendo o histórico
+#   fix(checkin): impedir registro fora da janela da reunião
+#   refactor(estrutura)!: organizar o código em camadas
+#
+# O "!" antes dos dois-pontos marca mudança que quebra compatibilidade.
+# ---------------------------------------------------------------------------

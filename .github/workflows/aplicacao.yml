@@ -58,11 +58,11 @@ jobs:
           falhou=0
           while IFS= read -r arquivo; do
             if head -5 "$arquivo" | grep -q "use client"; then
-              if grep -qE "DATABASE_URL|lib/db/|@/lib/auth/senha" "$arquivo"; then
+              if grep -qE "DATABASE_URL|infraestrutura/banco/|infraestrutura/seguranca/senha" "$arquivo"; then
                 echo "::error file=$arquivo::acesso ao banco referenciado em componente de cliente"
                 falhou=1
               fi
             fi
-          done < <(find . -path ./node_modules -prune -o \( -name '*.js' -o -name '*.jsx' \) -print)
+          done < <(find ./src -name '*.js' -o -name '*.jsx')
           if [ "$falhou" = "1" ]; then exit 1; fi
           echo "nenhuma referência ao banco em código de navegador"
