@@ -9,8 +9,9 @@
     "strict": false,
     "noEmit": true,
     "resolveJsonModule": true,
-    "paths": { "@/*": ["./*"] }
+    "baseUrl": ".",
+    "paths": { "@/*": ["./src/*"] }
   },
-  "include": ["**/*.js", "**/*.jsx"],
+  "include": ["src/**/*.js", "src/**/*.jsx", "testes/**/*.js", "scripts/**/*.mjs"],
   "exclude": ["node_modules", ".next"]
 }

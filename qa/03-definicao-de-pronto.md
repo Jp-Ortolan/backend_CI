@@ -15,7 +15,7 @@ back-end, front-end e DevOps.
 
 - [ ] A mudança está numa **migration nova**, nunca editando uma já aplicada
 - [ ] `./scripts/testar-banco.sh` passa
-- [ ] Regra de negócio nova tem teste em `tests/`
+- [ ] Regra de negócio nova tem teste em `testes/`
 - [ ] O DER foi atualizado, se a estrutura mudou
 
 ## Se criou endpoint

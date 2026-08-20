@@ -4,7 +4,7 @@
 quando o caso se torna executável, segundo o cronograma.
 
 Os casos de banco (constraints e cálculo de indicadores) já estão automatizados
-em `tests/` e rodam no CI — não é preciso repeti-los manualmente. Esta lista
+em `testes/` e rodam no CI — não é preciso repeti-los manualmente. Esta lista
 cobre o que só se verifica pela interface e pelo uso real.
 
 ## Como usar
