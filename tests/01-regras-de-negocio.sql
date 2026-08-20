@@ -175,5 +175,33 @@ begin
   delete from auth.users where id = novo_id;
 end $$;
 
+
+-- ---------------------------------------------------------------------------
+-- Permissões: a política de DELETE precisa ser exclusiva do administrador
+-- (matriz em lib/dominio/permissoes.ts). Se alguém reabrir para gestor, cai aqui.
+do $$
+declare faltando text; permissiva text;
+begin
+  select string_agg(t, ', ') into faltando
+  from unnest(array['instituicao','pessoa','vinculo','reuniao','presenca','documento']) t
+  where not exists (
+    select 1 from pg_policies p
+     where p.schemaname = 'public' and p.tablename = t
+       and p.cmd = 'DELETE' and p.qual like '%admin%'
+  );
+  if faltando is not null then
+    raise exception 'FALHOU RF03: sem política de DELETE restrita a admin em: %', faltando;
+  end if;
+
+  select string_agg(tablename || '.' || policyname, ', ') into permissiva
+  from pg_policies
+   where schemaname = 'public' and cmd = 'DELETE' and qual like '%gestor%';
+  if permissiva is not null then
+    raise exception 'FALHOU RF03: gestor consegue excluir em: %', permissiva;
+  end if;
+
+  raise notice 'OK   RF03 — exclusão restrita ao administrador em todas as tabelas';
+end $$;
+
 \echo ''
 \echo '== 01-regras-de-negocio: todos os testes passaram =='

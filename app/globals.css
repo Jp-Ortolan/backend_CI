@@ -1,0 +1,73 @@
+/* Estilos mínimos e provisórios.
+   A trilha de UX/UI substitui isto pelo design system (Tailwind + shadcn/ui).
+   Aqui só o suficiente para o fluxo ser navegável e testável pelo QA. */
+
+:root{
+  --marca900:#0B2545; --marca500:#2A6CB0; --marca100:#E8F1FB;
+  --txt:#172B4D; --txt2:#5E6C84; --txt3:#8993A4;
+  --fundo:#F1F4F8; --borda:#DFE4EC; --borda2:#C4CDDB;
+  --ok:#2E9E5B; --ok100:#EAFAF1; --erro:#C0392B; --erro100:#FDEEEA;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;color:var(--txt);
+     background:var(--fundo);line-height:1.5;font-size:15px}
+a{color:var(--marca500)}
+
+/* ---------- acesso ---------- */
+.auth-palco{min-height:100vh;display:grid;place-items:center;padding:24px}
+.auth-cartao{width:100%;max-width:420px;background:#fff;border:1px solid var(--borda);
+             border-radius:12px;padding:36px 32px}
+.auth-marca{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--txt3);font-weight:600}
+.auth-titulo{font-size:19px;line-height:1.3;margin:8px 0 26px}
+.auth-h2{font-size:22px;margin-bottom:4px}
+.auth-sub{font-size:13.5px;color:var(--txt2);margin-bottom:20px}
+.auth-rodape{font-size:12px;color:var(--txt3);text-align:center;margin-top:22px;line-height:1.6}
+
+.form{display:flex;flex-direction:column;gap:14px}
+.campo{display:flex;flex-direction:column;gap:5px}
+.campo span{font-size:12.5px;font-weight:600;color:var(--txt2)}
+.campo input{border:1px solid var(--borda2);border-radius:6px;padding:11px 12px;
+             font-size:15px;font-family:inherit;color:var(--txt)}
+.campo input:focus{outline:2px solid var(--marca500);outline-offset:-1px}
+.btn{background:var(--marca500);color:#fff;border:0;border-radius:6px;padding:13px 16px;
+     font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.btn:hover{background:var(--marca900)}
+.btn[disabled]{opacity:.6;cursor:progress}
+.link{background:none;border:0;color:var(--marca500);font-size:13.5px;font-weight:600;
+      cursor:pointer;font-family:inherit;text-align:center;text-decoration:none;padding:0}
+.msg{font-size:13.5px;border-radius:6px;padding:10px 12px}
+.msg.erro{background:var(--erro100);color:#8f2618}
+.msg.ok{background:var(--ok100);color:#1b6b3c}
+
+/* ---------- painel ---------- */
+.painel{display:flex;min-height:100vh}
+.painel-lateral{width:236px;flex:none;background:var(--marca900);color:#c6d5e6;
+                padding:20px 0;display:flex;flex-direction:column}
+.painel-marca{padding:0 18px 16px;border-bottom:1px solid rgba(255,255,255,.1)}
+.painel-marca strong{display:block;color:#fff;font-size:14px}
+.painel-marca small{font-size:11px;color:#8fa9c6}
+.painel-lateral nav{flex:1;padding-top:10px}
+.painel-lateral ul{list-style:none}
+.painel-lateral li a{display:block;padding:9px 18px;color:#c6d5e6;text-decoration:none;font-size:14px}
+.painel-lateral li a:hover{background:rgba(255,255,255,.08);color:#fff}
+.painel-perfil{display:flex;align-items:center;gap:10px;padding:14px 18px 0;
+               border-top:1px solid rgba(255,255,255,.1);font-size:12px}
+.painel-perfil strong{display:block;color:#fff}
+.painel-perfil small{color:#8fa9c6}
+.painel-perfil form{margin-left:auto}
+.avatar{width:32px;height:32px;border-radius:50%;background:var(--marca500);color:#fff;
+        display:grid;place-items:center;font-size:12px;font-weight:700;flex:none}
+.painel-conteudo{flex:1;min-width:0}
+.conteudo{padding:26px 30px}
+.conteudo-cabecalho{margin-bottom:22px}
+.conteudo-cabecalho h1{font-size:22px}
+.conteudo-cabecalho p{font-size:13px;color:var(--txt3);margin-top:2px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px}
+.kpi{background:#fff;border:1px solid var(--borda);border-radius:8px;padding:16px 18px}
+.kpi p{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt3);font-weight:600}
+.kpi strong{display:block;font-size:28px;margin-top:6px}
+
+@media (max-width:760px){
+  .painel{flex-direction:column}
+  .painel-lateral{width:100%}
+}

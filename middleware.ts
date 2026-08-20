@@ -31,11 +31,15 @@ export async function middleware(req: NextRequest) {
   const { data } = await supabase.auth.getUser();
   const caminho = req.nextUrl.pathname;
 
-  const publico =
-    caminho.startsWith('/checkin') ||
-    caminho.startsWith('/api/checkin') ||
-    caminho.startsWith('/login') ||
-    caminho === '/';
+  const ROTAS_PUBLICAS = [
+    '/checkin',           // página do participante — não pode exigir login
+    '/api/checkin',
+    '/login',
+    '/recuperar-senha',
+    '/redefinir-senha',
+    '/auth/callback',     // troca o código do e-mail por sessão
+  ];
+  const publico = caminho === '/' || ROTAS_PUBLICAS.some(r => caminho.startsWith(r));
 
   if (!data.user && !publico) {
     const url = req.nextUrl.clone();

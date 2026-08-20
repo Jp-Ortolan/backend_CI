@@ -12,7 +12,7 @@
     "db:reset": "supabase db reset",
     "db:testar": "./scripts/testar-banco.sh",
     "db:tipos": "supabase gen types typescript --local > lib/tipos-banco.ts",
-    "test:dominio": "node --import tsx --test tests/dominio.test.ts"
+    "test:dominio": "node --import tsx --test tests/dominio.test.ts tests/permissoes.test.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
