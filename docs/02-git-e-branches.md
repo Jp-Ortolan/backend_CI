@@ -4,7 +4,7 @@
 
 | Branch | Papel | Deploy |
 |---|---|---|
-| `main` | O que está em produção. Só recebe merge vindo de `develop`. | Produção (Vercel) |
+| `main` | O que está em produção. Só recebe merge vindo de `develop`. | Produção (Railway) |
 | `develop` | Integração. É daqui que sai a homologação. | Homologação |
 | `tipo/RFxx-descricao` | Trabalho do dia a dia. Sai de `develop`, volta por PR. | Preview automático |
 
@@ -53,10 +53,10 @@ estado que nenhum comando reproduz, e a diferença só aparece em produção.
 
 Para gerar:
 
-Crie o arquivo em `db/migrations/` com o próximo número da sequência:
+Crie o arquivo em `banco/migrations/` com o próximo número da sequência (hoje existe só a `001`):
 
 ```
-db/migrations/011_descricao_em_minusculas.sql
+banco/migrations/002_descricao_em_minusculas.sql
 ```
 
 O CI recusa nome fora do padrão e recusa números repetidos — o que acontece

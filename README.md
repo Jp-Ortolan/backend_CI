@@ -97,17 +97,21 @@ não ficar no repositório. Detalhes em [docs/03-ambientes.md](docs/03-ambientes
 
 | Pasta | Conteúdo | Trilha |
 |---|---|---|
-| `db/migrations/` | As 10 migrations, numeradas e em ordem | Back-end |
-| `db/seed.sql` | Dados de exemplo para desenvolver | Back-end |
-| `app/(auth)/` | Login, recuperar senha, redefinir senha | Back-end |
-| `app/(painel)/` | Área logada | Front-end daqui pra frente |
-| `app/api/` | Check-in por QR Code e encerramentos | Back-end |
-| `lib/db/` | Pool e a transação que declara o usuário para o RLS | Back-end |
-| `lib/auth/` | Argon2id, tokens, sessão | Back-end |
-| `lib/dominio/` | Regras de negócio e matriz de permissões | Back-end |
-| `tests/` | Os 55 testes | Back-end + QA |
-| `docs/` | Arquitetura, Git, ambientes, API, permissões | Todos |
+| `banco/migrations/` | A migration única que cria o banco inteiro | Back-end |
+| `banco/seed.sql` | Dados de exemplo para desenvolver | Back-end |
+| `src/app/` | ① Apresentação: telas e rotas HTTP | Back-end → Front-end |
+| `src/aplicacao/` | ② Casos de uso: uma ação do sistema por arquivo | Back-end |
+| `src/dominio/` | ③ Regras de negócio e matriz de permissões | Back-end |
+| `src/infraestrutura/` | ④ Banco, senha, sessão, e-mail, HTTP | Back-end |
+| `testes/` | Os 55 testes (banco, domínio, integração) | Back-end + QA |
+| `scripts/` | Migrar, resetar, testar, criar usuário | DevOps |
+| `docs/` | Arquitetura, Git, ambientes, API, permissões, mapa | Todos |
 | `qa/` | Plano de testes e os 45 casos | QA |
+
+O projeto segue **arquitetura em camadas**: apresentação → aplicação → domínio,
+com a infraestrutura de lado. `src/dominio/` não importa nada de ninguém.
+O detalhe arquivo por arquivo está em
+[docs/06-mapa-do-projeto.md](docs/06-mapa-do-projeto.md).
 
 ---
 
@@ -115,6 +119,7 @@ não ficar no repositório. Detalhes em [docs/03-ambientes.md](docs/03-ambientes
 
 | Documento | Para quem |
 |---|---|
+| [Mapa do projeto](docs/06-mapa-do-projeto.md) | **Comece por aqui** — padrão de arquitetura e o que faz cada arquivo |
 | [Arquitetura](docs/01-arquitetura.md) | Todos — leitura obrigatória antes do primeiro PR |
 | [Git e branches](docs/02-git-e-branches.md) | Todos |
 | [Ambientes e Railway](docs/03-ambientes.md) | DevOps |
@@ -145,7 +150,8 @@ de instituição reescreve o histórico das reuniões passadas.
 
 ## Mexer no banco
 
-Crie o próximo arquivo numerado em `db/migrations/` e rode:
+Crie o próximo arquivo numerado em `banco/migrations/` (hoje existe a `001`;
+a próxima é a `002_descricao.sql`) e rode:
 
 ```bash
 ./scripts/migrar.sh      # aplica só o que falta

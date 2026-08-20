@@ -28,7 +28,7 @@ mais do que qualquer comparação de recursos: o tempo que não se gasta aprende
 ferramenta volta como funcionalidade entregue.
 
 O preço da escolha é que autenticação e recuperação de senha passam a ser
-código nosso — estão em `lib/auth/` e nas funções `auth_*` do banco, com testes.
+código nosso — estão em `src/infraestrutura/seguranca/` e nas funções `auth_*` do banco, com testes.
 
 O que se ganha: o banco local, o de homologação e o de produção são o mesmo
 PostgreSQL, sem nenhuma peça que só exista em uma plataforma. E não existe mais
@@ -49,34 +49,32 @@ privilégio elevado, mas faz **só** o que está escrito nela — validar o toke
 conferir a janela, resolver o vínculo da data e gravar. Não existe chave-mestra
 para vazar.
 
-## Organização de pastas (proposta)
+## Organização de pastas
+
+Arquitetura em camadas. Detalhe arquivo por arquivo em `docs/06-mapa-do-projeto.md`.
 
 ```
-app/
-  (painel)/                 rotas autenticadas
-    dashboard/
-    instituicoes/
-    representantes/
-    reunioes/
-  checkin/[token]/          página pública de check-in
-  api/
-    checkin/route.js        registra presença via função do banco
-lib/
-  db/
-    pool.js                 pool de conexões (pg)
-    consulta.js             consulta() e comUsuario() — a transação com RLS
-  auth/
-    senha.js                hash e conferência Argon2id
-    tokens.js               sorteio e hash de tokens de sessão e recuperação
-    sessao.js               abrir, ler, encerrar sessão; exigirUsuario
-  dominio/                  regras de negócio e matriz de permissões
-  email/enviar.js           adaptador de envio (terminal ou provedor)
-components/
-db/
-  migrations/               histórico versionado do banco
-  seed.sql
-tests/                      testes SQL de regra de negócio
+banco/
+  migrations/001_estrutura_inicial.sql   o banco inteiro, em 10 partes
+  seed.sql                               dados de exemplo
+src/
+  app/                    ① apresentação — rotas e telas do Next.js
+    (acesso)/             login, recuperação e redefinição de senha
+    (painel)/             área autenticada
+    api/                  rotas HTTP (check-in, encerramentos)
+  aplicacao/              ② casos de uso — um arquivo por ação do sistema
+    autenticacao/  checkin/  reunioes/  vinculos/
+  dominio/                ③ regras — permissoes.js, erros.js, tipos.js
+  infraestrutura/         ④ ferramentas
+    banco/  seguranca/  email/  http/
+  middleware.js           barreira de cookie antes do painel
+testes/
+  banco/  dominio/  integracao/
+scripts/                  migrar, resetar, testar, criar usuário
 ```
+
+A regra de dependência: apresentação → aplicação → domínio. `src/dominio/` não
+importa nada, de ninguém. Se um dia importar, a camada vazou.
 
 ## Linguagem
 
@@ -96,8 +94,8 @@ tabelas ignora o RLS. A `DATABASE_URL` da aplicação usa `app_web`, que não é
 dono de nada. Migrations e seeds rodam com o usuário dono, por outra variável
 (`DATABASE_URL_ADMIN`), e só em script.
 
-**Nada de `lib/db` em componente de cliente.** Há um job de CI que falha se
-`DATABASE_URL` ou `lib/db/` aparecerem num arquivo com `"use client"`.
+**Nada de `src/infraestrutura/banco` em componente de cliente.** Há um job de CI que falha se
+`DATABASE_URL` ou `infraestrutura/banco/` aparecerem num arquivo com `"use client"`.
 
 E uma armadilha do próprio PostgreSQL que vale conhecer: quando falta política
 de INSERT, ele levanta erro; quando falta a de UPDATE ou DELETE, ele apenas não

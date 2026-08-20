@@ -70,7 +70,7 @@ cadastra existe para o Auth e não existe para o sistema.
 
 ### DevOps
 
-Deploy inicial na Vercel; variáveis de ambiente separadas por ambiente; primeiro
+Deploy inicial no Railway; variáveis de ambiente separadas por ambiente; primeiro
 `supabase db push` para homologação; README validado por alguém que ainda não
 subiu o projeto — se essa pessoa conseguir sozinha, a documentação está boa.
 
