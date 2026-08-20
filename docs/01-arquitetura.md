@@ -8,7 +8,7 @@
             |  autenticado                     |  sem login
             v                                  v
    +---------------------------------------------------+
-   |                  Next.js (Vercel)                  |
+   |                  Next.js (Railway)                 |
    |   /painel/*  (protegido)     /checkin/<qr_token>   |
    +---------------------------------------------------+
             |                                  |
@@ -60,23 +60,34 @@ app/
     reunioes/
   checkin/[token]/          página pública de check-in
   api/
-    checkin/route.ts        grava presença com service role
+    checkin/route.js        registra presença via função do banco
 lib/
   db/
-    pool.ts                 pool de conexões (pg)
-    consulta.ts             consulta() e comUsuario() — a transação com RLS
+    pool.js                 pool de conexões (pg)
+    consulta.js             consulta() e comUsuario() — a transação com RLS
   auth/
-    senha.ts                hash e conferência Argon2id
-    tokens.ts               sorteio e hash de tokens de sessão e recuperação
-    sessao.ts               abrir, ler, encerrar sessão; exigirUsuario
+    senha.js                hash e conferência Argon2id
+    tokens.js               sorteio e hash de tokens de sessão e recuperação
+    sessao.js               abrir, ler, encerrar sessão; exigirUsuario
   dominio/                  regras de negócio e matriz de permissões
-  email/enviar.ts           adaptador de envio (terminal ou provedor)
+  email/enviar.js           adaptador de envio (terminal ou provedor)
 components/
 db/
   migrations/               histórico versionado do banco
   seed.sql
 tests/                      testes SQL de regra de negócio
 ```
+
+## Linguagem
+
+JavaScript puro, sem etapa de compilação. Os tipos ficam em comentários JSDoc
+(`lib/tipos-banco.js` e as assinaturas das funções), lidos pelo editor via
+`jsconfig.json` — o `checkJs` está ligado, então erro de digitação em nome de
+coluna ou em valor de enum aparece sublinhado enquanto se escreve, sem que o
+projeto dependa de TypeScript para rodar ou para publicar.
+
+A verificação que roda no CI é `npm run lint` (ESLint com a configuração do
+Next) mais os testes. Não existe `npm run typecheck`.
 
 ## Duas regras que não se negociam
 

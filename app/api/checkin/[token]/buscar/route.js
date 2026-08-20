@@ -1,15 +1,18 @@
-import { NextRequest } from 'next/server';
-import { consulta } from '@/lib/db/consulta';
-import { ErroDeNegocio } from '@/lib/dominio/erros';
-import { ok, falha } from '@/lib/dominio/resposta';
-import { traduzirErroDoBanco } from '@/lib/dominio/erros-banco';
+import { consulta } from '@/lib/db/consulta.js';
+import { ErroDeNegocio } from '@/lib/dominio/erros.js';
+import { ok, falha } from '@/lib/dominio/resposta.js';
+import { traduzirErroDoBanco } from '@/lib/dominio/erros-banco.js';
 
 export const dynamic = 'force-dynamic';
 
-interface Candidato {
-  pessoa_id: string; nome: string; instituicao: string;
-  cargo: string | null; vinculo_id: string;
-}
+/**
+ * @typedef {object} Candidato
+ * @property {string} pessoa_id
+ * @property {string} nome
+ * @property {string} instituicao
+ * @property {string|null} cargo
+ * @property {string} vinculo_id
+ */
 
 /**
  * GET — busca o participante pelo nome (RF28).
@@ -17,19 +20,21 @@ interface Candidato {
  * A função do banco devolve no máximo 5 resultados e exige 3 caracteres:
  * retornar nome e instituição de quem ainda não confirmou presença é uma
  * exposição pequena mas real, e os dois limites dificultam varrer a base.
+ *
+ * @param {import('next/server').NextRequest} req
+ * @param {{ params: { token: string } }} contexto
  */
-export async function GET(req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(req, { params }) {
   try {
     const termo = (req.nextUrl.searchParams.get('nome') ?? '').trim();
     if (termo.length < 3) {
       throw new ErroDeNegocio('DADOS_INVALIDOS', 'Digite ao menos 3 letras do nome.');
     }
 
-    let linhas: Candidato[] = [];
+    /** @type {Candidato[]} */
+    let linhas = [];
     try {
-      linhas = await consulta<Candidato>(
-        'select * from checkin_buscar($1, $2)', [params.token, termo],
-      );
+      linhas = await consulta('select * from checkin_buscar($1, $2)', [params.token, termo]);
     } catch (e) { traduzirErroDoBanco(e); }
 
     return ok({

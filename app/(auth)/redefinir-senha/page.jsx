@@ -1,10 +1,11 @@
-import { FormRedefinir } from '../formularios';
+import { FormRedefinir } from '../formularios.jsx';
 
 export const dynamic = 'force-dynamic';
 
-export default function PaginaRedefinir({
-  searchParams,
-}: { searchParams: { token?: string } }) {
+/**
+ * @param {{ searchParams: { token?: string } }} props
+ */
+export default function PaginaRedefinir({ searchParams }) {
   const token = searchParams.token ?? '';
 
   if (!token) {

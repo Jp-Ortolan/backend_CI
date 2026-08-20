@@ -6,7 +6,7 @@ A regra vive em **dois lugares e precisa ser mudada nos dois**:
 
 | Onde | Papel |
 |---|---|
-| `lib/dominio/permissoes.ts` | Decide o que a interface mostra e o que a Server Action aceita |
+| `lib/dominio/permissoes.js` | Decide o que a interface mostra e o que a Server Action aceita |
 | `db/migrations/007_seguranca_rls.sql` | Decide o que o banco aceita, independente da aplicação |
 
 A interface esconder um botão não é controle de acesso — é conforto. Quem protege
@@ -126,9 +126,9 @@ o padrão é `leitura` — ninguém ganha permissão de escrita sozinho.
 
 | Teste | Onde | O que garante |
 |---|---|---|
-| 11 testes da matriz | `tests/permissoes.test.ts` | Gestor não exclui, consulta não escreve, menu correto por perfil |
+| 11 testes da matriz | `tests/permissoes.test.js` | Gestor não exclui, consulta não escreve, menu correto por perfil |
 | 9 testes de acesso no banco | `tests/03-seguranca.sql` | Conecta como `app_web` e confere o que cada perfil consegue de fato fazer |
-| Sessão e RLS ponta a ponta | `tests/integracao.test.ts` | Hash confere, sessão vale, `papel_atual()` devolve o papel certo |
+| Sessão e RLS ponta a ponta | `tests/integracao.test.js` | Hash confere, sessão vale, `papel_atual()` devolve o papel certo |
 
 ---
 

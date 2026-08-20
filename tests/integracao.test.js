@@ -12,14 +12,17 @@
  */
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { Client } from 'pg';
-import { gerarHash, conferir } from '../lib/auth/senha';
-import { gerarToken, hashToken } from '../lib/auth/tokens';
+import pg from 'pg';
+import { gerarHash, conferir } from '../lib/auth/senha.js';
+import { gerarToken, hashToken } from '../lib/auth/tokens.js';
+
+const { Client } = pg;
 
 const URL = process.env.DATABASE_URL ?? '';
 const rodar = URL.length > 0;
 
-let db: Client;
+/** @type {import('pg').Client} */
+let db;
 const EMAIL = `teste.integracao.${Date.now()}@centroinovacao.br`;
 const SENHA = 'senhaDeTeste123';
 let usuarioId = '';
@@ -50,7 +53,7 @@ test('senha correta é aceita e senha errada é recusada', { skip: !rodar }, asy
   const { rows } = await db.query(
     'select senha_hash from auth_credenciais($1)', [EMAIL],
   );
-  const hashSalvo = rows[0].senha_hash as string;
+  const hashSalvo = rows[0].senha_hash;
 
   assert.equal(await conferir(SENHA, hashSalvo), true, 'a senha correta deveria passar');
   assert.equal(await conferir('outraCoisa', hashSalvo), false, 'senha errada não pode passar');

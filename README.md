@@ -52,9 +52,31 @@ Entre com cada um para ver o menu mudar — é a matriz de permissões funcionan
 | `npm run db:testar` | 36 testes de regra, acesso e check-in direto no banco |
 | `npm run test:dominio` | 11 testes da matriz de permissões |
 | `npm run test:integracao` | 8 testes de autenticação contra um banco real |
-| `npm run typecheck` | Verificação de tipos |
+| `npm run lint` | Verificação de estilo e de erros comuns (ESLint) |
 
 ---
+
+## A linguagem do projeto
+
+**O projeto é JavaScript.** Não há TypeScript, `tsconfig.json` nem etapa de
+compilação de tipos — `npm install` e pronto.
+
+O que existe no lugar são comentários JSDoc nos pontos que valem a pena:
+
+```js
+/**
+ * @param {string} usuarioId
+ * @param {(tx: Transacao) => Promise<T>} acao
+ */
+export async function comUsuario(usuarioId, acao) { ... }
+```
+
+Isso é comentário — o Node ignora. Mas o VS Code lê e passa a completar nomes e
+avisar quando algo está escrito errado (um papel `"gerente"` onde só existe
+`admin`, `gestor` ou `leitura`, por exemplo). O `jsconfig.json` na raiz é o que
+liga essa verificação; apagá-lo não quebra nada, só tira o aviso.
+
+Os tipos das tabelas ficam em `lib/tipos-banco.js`, também como JSDoc.
 
 ## Os dois usuários do banco
 

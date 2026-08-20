@@ -1,9 +1,8 @@
-import { NextRequest } from 'next/server';
-import { comUsuario } from '@/lib/db/consulta';
-import { usuarioAtual } from '@/lib/auth/sessao';
-import { pode } from '@/lib/dominio/permissoes';
-import { ErroDeNegocio } from '@/lib/dominio/erros';
-import { ok, falha } from '@/lib/dominio/resposta';
+import { comUsuario } from '@/lib/db/consulta.js';
+import { usuarioAtual } from '@/lib/auth/sessao.js';
+import { pode } from '@/lib/dominio/permissoes.js';
+import { ErroDeNegocio } from '@/lib/dominio/erros.js';
+import { ok, falha } from '@/lib/dominio/resposta.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,8 +12,11 @@ export const dynamic = 'force-dynamic';
  *
  * É este passo que fecha o denominador dos indicadores: sem ele, quem faltou
  * simplesmente não existe e o percentual de participação fica sempre em 100%.
+ *
+ * @param {import('next/server').NextRequest} _req
+ * @param {{ params: { id: string } }} contexto
  */
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(_req, { params }) {
   try {
     const usuario = await usuarioAtual();
     if (!usuario) throw new ErroDeNegocio('NAO_AUTENTICADO', 'É preciso estar autenticado.');
@@ -23,7 +25,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     }
 
     return await comUsuario(usuario.id, async (tx) => {
-      const r = await tx.consultaUm<{ id: string; data: string; status: string }>(
+      const r = await tx.consultaUm(
         'select id, data, status from reuniao where id = $1', [params.id],
       );
       if (!r) throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
@@ -33,7 +35,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
       // Quem tinha vínculo válido NA DATA da reunião era esperado ali e não
       // registrou presença: entra como ausente, com o snapshot daquele vínculo.
-      const ausentes = await tx.consulta<{ id: string }>(
+      const ausentes = await tx.consulta(
         `insert into presenca (reuniao_id, pessoa_id, vinculo_id, instituicao_id,
                                cargo_no_momento, tipo, status, origem, registrado_por)
          select $1, v.pessoa_id, v.id, v.instituicao_id, v.cargo,
@@ -50,9 +52,7 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
 
       await tx.consulta(`update reuniao set status = 'encerrada' where id = $1`, [r.id]);
 
-      const resumo = await tx.consultaUm<{
-        presentes: string; ausentes: string; convidados: string; percentual_presenca: string | null;
-      }>(
+      const resumo = await tx.consultaUm(
         `select presentes, ausentes, convidados, percentual_presenca
            from vw_resumo_reuniao where reuniao_id = $1`, [r.id],
       );

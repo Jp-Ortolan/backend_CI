@@ -148,7 +148,7 @@ Conferir que está tudo de pé:
 
 ```bash
 npm run db:testar      # 36 testes no banco
-npm run test:dominio   # 22 testes em TypeScript
+npm run test:dominio   # 11 testes da matriz de permissões
 ```
 
 ---

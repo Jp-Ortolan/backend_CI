@@ -1,17 +1,19 @@
 import { redirect } from 'next/navigation';
-import { usuarioAtual } from '@/lib/auth/sessao';
-import { FormLogin } from '../formularios';
+import { usuarioAtual } from '@/lib/auth/sessao.js';
+import { FormLogin } from '../formularios.jsx';
 
 export const dynamic = 'force-dynamic';
 
-const MENSAGENS: Record<string, string> = {
+/** @type {Record<string, string>} */
+const MENSAGENS = {
   sessao_expirada: 'Sua sessão expirou. Entre novamente.',
   sem_sessao: 'Entre para continuar.',
 };
 
-export default async function PaginaLogin({
-  searchParams,
-}: { searchParams: { redirecionar?: string; erro?: string } }) {
+/**
+ * @param {{ searchParams: { redirecionar?: string, erro?: string } }} props
+ */
+export default async function PaginaLogin({ searchParams }) {
   if (await usuarioAtual()) redirect('/dashboard');
 
   const aviso = searchParams.erro ? MENSAGENS[searchParams.erro] : undefined;

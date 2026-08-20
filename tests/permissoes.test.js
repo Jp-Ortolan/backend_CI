@@ -8,10 +8,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { pode, acoesDe, menuDoPapel, ROTULO_PAPEL } from '../lib/dominio/permissoes';
+import { pode, acoesDe, menuDoPapel, ROTULO_PAPEL } from '../lib/dominio/permissoes.js';
 
 test('admin pode tudo sobre instituição', () => {
-  for (const a of ['ver','criar','editar','encerrar','excluir','exportar'] as const) {
+  for (const a of ['ver', 'criar', 'editar', 'encerrar', 'excluir', 'exportar']) {
     assert.equal(pode('admin', 'instituicao', a), true, `admin deveria poder ${a}`);
   }
 });
@@ -31,7 +31,7 @@ test('gestor não administra usuários', () => {
 
 test('consulta só lê', () => {
   assert.equal(pode('leitura', 'instituicao', 'ver'), true);
-  for (const a of ['criar','editar','encerrar','excluir','exportar'] as const) {
+  for (const a of ['criar', 'editar', 'encerrar', 'excluir', 'exportar']) {
     assert.equal(pode('leitura', 'instituicao', a), false, `leitura não deveria poder ${a}`);
   }
 });
@@ -69,7 +69,7 @@ test('acoesDe devolve cópia — mutar não contamina a matriz', () => {
 });
 
 test('todo papel tem rótulo de exibição', () => {
-  for (const p of ['admin','gestor','leitura'] as const) {
+  for (const p of ['admin', 'gestor', 'leitura']) {
     assert.ok(ROTULO_PAPEL[p] && ROTULO_PAPEL[p].length > 0);
   }
 });

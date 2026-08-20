@@ -10,7 +10,7 @@ on:
 
 jobs:
   qualidade:
-    name: Lint, tipos e build
+    name: Lint, testes e build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -37,8 +37,6 @@ jobs:
       - if: steps.existe.outputs.sim == 'true'
         run: npm run lint --if-present
 
-      - if: steps.existe.outputs.sim == 'true'
-        run: npm run typecheck --if-present
 
       - if: steps.existe.outputs.sim == 'true'
         run: npm run test:dominio --if-present
@@ -65,6 +63,6 @@ jobs:
                 falhou=1
               fi
             fi
-          done < <(find . -path ./node_modules -prune -o \( -name '*.ts' -o -name '*.tsx' \) -print)
+          done < <(find . -path ./node_modules -prune -o \( -name '*.js' -o -name '*.jsx' \) -print)
           if [ "$falhou" = "1" ]; then exit 1; fi
           echo "nenhuma referência ao banco em código de navegador"

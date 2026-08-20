@@ -1,4 +1,4 @@
-import { FormRecuperar } from '../formularios';
+import { FormRecuperar } from '../formularios.jsx';
 
 export default function PaginaRecuperar() {
   return (

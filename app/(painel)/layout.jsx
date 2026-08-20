@@ -1,11 +1,13 @@
-import { exigirUsuario } from '@/lib/auth/sessao';
-import { menuDoPapel, ROTULO_PAPEL } from '@/lib/dominio/permissoes';
+import { exigirUsuario } from '@/lib/auth/sessao.js';
+import { menuDoPapel, ROTULO_PAPEL } from '@/lib/dominio/permissoes.js';
 
 /**
  * Moldura autenticada. Além do middleware, esta camada resolve o papel do
  * usuário e monta o menu com o que ele pode ver (RF03).
+ *
+ * @param {{ children: React.ReactNode }} props
  */
-export default async function LayoutPainel({ children }: { children: React.ReactNode }) {
+export default async function LayoutPainel({ children }) {
   const usuario = await exigirUsuario();
   const itens = menuDoPapel(usuario.papel);
   const iniciais = usuario.nome.split(' ').filter(Boolean).slice(0, 2)

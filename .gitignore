@@ -15,11 +15,6 @@ dist/
 .env*.local
 !.env.example
 
-# Supabase
-supabase/.branches/
-supabase/.temp/
-supabase/.env
-
 # sistema
 .DS_Store
 Thumbs.db
@@ -30,5 +25,3 @@ npm-debug.log*
 .vscode/*
 !.vscode/extensions.json
 .idea/
-next-env.d.ts
-*.tsbuildinfo

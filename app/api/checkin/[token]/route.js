@@ -1,13 +1,10 @@
-import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { consultaUm } from '@/lib/db/consulta';
-import { ErroDeNegocio } from '@/lib/dominio/erros';
-import { ok, falha } from '@/lib/dominio/resposta';
-import { traduzirErroDoBanco } from '@/lib/dominio/erros-banco';
+import { consultaUm } from '@/lib/db/consulta.js';
+import { ErroDeNegocio } from '@/lib/dominio/erros.js';
+import { ok, falha } from '@/lib/dominio/resposta.js';
+import { traduzirErroDoBanco } from '@/lib/dominio/erros-banco.js';
 
 export const dynamic = 'force-dynamic';
-
-type Contexto = { params: { token: string } };
 
 /**
  * As três rotas de check-in delegam a regra às funções do banco
@@ -16,17 +13,26 @@ type Contexto = { params: { token: string } };
  * qualquer código que chegue nele.
  */
 
-interface ReuniaoPublica {
-  titulo: string; data: string; hora_inicio: string | null;
-  local: string | null; status: string; aberto: boolean;
-}
+/**
+ * @typedef {object} ReuniaoPublica
+ * @property {string} titulo
+ * @property {string} data
+ * @property {string|null} hora_inicio
+ * @property {string|null} local
+ * @property {string} status
+ * @property {boolean} aberto
+ */
 
-/** GET — dados públicos da reunião para montar a tela (RF27). */
-export async function GET(_req: NextRequest, { params }: Contexto) {
+/**
+ * GET — dados públicos da reunião para montar a tela (RF27).
+ *
+ * @param {import('next/server').NextRequest} _req
+ * @param {{ params: { token: string } }} contexto
+ */
+export async function GET(_req, { params }) {
   try {
-    const r = await consultaUm<ReuniaoPublica>(
-      'select * from checkin_reuniao($1)', [params.token],
-    );
+    /** @type {ReuniaoPublica|null} */
+    const r = await consultaUm('select * from checkin_reuniao($1)', [params.token]);
     if (!r) {
       throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA',
         'Não encontramos esta reunião. Confira o QR Code.');
@@ -51,18 +57,24 @@ const corpo = z.union([
   }),
 ]);
 
-interface Registro {
-  out_presenca_id: string;
-  out_participante: string;
-  out_instituicao: string | null;
-  out_cargo: string | null;
-  out_tipo: 'representante' | 'convidado';
-  out_registrado_em: string;
-  out_ja_existia: boolean;
-}
+/**
+ * @typedef {object} Registro
+ * @property {string} out_presenca_id
+ * @property {string} out_participante
+ * @property {string|null} out_instituicao
+ * @property {string|null} out_cargo
+ * @property {'representante'|'convidado'} out_tipo
+ * @property {string} out_registrado_em
+ * @property {boolean} out_ja_existia
+ */
 
-/** POST — registra a presença (RF29 a RF34). */
-export async function POST(req: NextRequest, { params }: Contexto) {
+/**
+ * POST — registra a presença (RF29 a RF34).
+ *
+ * @param {import('next/server').NextRequest} req
+ * @param {{ params: { token: string } }} contexto
+ */
+export async function POST(req, { params }) {
   try {
     const analise = corpo.safeParse(await req.json().catch(() => null));
     if (!analise.success) {
@@ -76,11 +88,10 @@ export async function POST(req: NextRequest, { params }: Contexto) {
          d.convidado.email || null, d.convidado.instituicao || null]
       : [params.token, d.pessoaId, null, null, null];
 
-    let linha: Registro | null;
+    /** @type {Registro|null} */
+    let linha = null;
     try {
-      linha = await consultaUm<Registro>(
-        'select * from checkin_registrar($1, $2, $3, $4, $5)', args,
-      );
+      linha = await consultaUm('select * from checkin_registrar($1, $2, $3, $4, $5)', args);
     } catch (e) { traduzirErroDoBanco(e); }
 
     if (!linha) throw new ErroDeNegocio('ERRO_INTERNO', 'Não foi possível registrar a presença.');

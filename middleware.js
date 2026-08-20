@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 /**
  * Barreira rápida: quem não tem cookie de sessão nem chega a carregar o painel.
@@ -20,7 +20,10 @@ const ROTAS_PUBLICAS = [
   '/sem-permissao',
 ];
 
-export function middleware(req: NextRequest) {
+/**
+ * @param {import('next/server').NextRequest} req
+ */
+export function middleware(req) {
   const caminho = req.nextUrl.pathname;
   const publico = caminho === '/' || ROTAS_PUBLICAS.some(r => caminho.startsWith(r));
   if (publico) return NextResponse.next();

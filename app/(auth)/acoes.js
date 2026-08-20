@@ -4,22 +4,29 @@ import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { consulta, consultaUm } from '@/lib/db/consulta';
-import { abrirSessao, encerrarSessao } from '@/lib/auth/sessao';
-import { conferir, gerarHash, SENHA_MINIMA } from '@/lib/auth/senha';
-import { DURACAO_RECUPERACAO_MINUTOS, gerarToken, hashToken } from '@/lib/auth/tokens';
-import { enviar } from '@/lib/email/enviar';
-import type { PapelUsuario } from '@/lib/tipos-banco';
+import { consulta, consultaUm } from '@/lib/db/consulta.js';
+import { abrirSessao, encerrarSessao } from '@/lib/auth/sessao.js';
+import { conferir, gerarHash, SENHA_MINIMA } from '@/lib/auth/senha.js';
+import { DURACAO_RECUPERACAO_MINUTOS, gerarToken, hashToken } from '@/lib/auth/tokens.js';
+import { enviar } from '@/lib/email/enviar.js';
 
-export interface EstadoForm {
-  erro?: string;
-  sucesso?: string;
-}
+/**
+ * O que o formulário devolve para a tela.
+ *
+ * @typedef {object} EstadoForm
+ * @property {string} [erro]
+ * @property {string} [sucesso]
+ */
 
-interface Credenciais {
-  id: string; nome: string; email: string;
-  senha_hash: string | null; papel: PapelUsuario; ativo: boolean;
-}
+/**
+ * @typedef {object} Credenciais
+ * @property {string} id
+ * @property {string} nome
+ * @property {string} email
+ * @property {string|null} senha_hash
+ * @property {import('@/lib/tipos-banco.js').PapelUsuario} papel
+ * @property {boolean} ativo
+ */
 
 const esquemaLogin = z.object({
   email: z.string().trim().email('Informe um e-mail válido.'),
@@ -32,8 +39,12 @@ const esquemaLogin = z.object({
  *
  * A mensagem é sempre a mesma para e-mail inexistente, senha errada e conta
  * desativada. Diferenciar entregaria a quem tentar a lista de quem tem conta.
+ *
+ * @param {EstadoForm} _estado
+ * @param {FormData} dados
+ * @returns {Promise<EstadoForm>}
  */
-export async function entrar(_estado: EstadoForm, dados: FormData): Promise<EstadoForm> {
+export async function entrar(_estado, dados) {
   const analise = esquemaLogin.safeParse({
     email: dados.get('email'),
     senha: dados.get('senha'),
@@ -43,7 +54,8 @@ export async function entrar(_estado: EstadoForm, dados: FormData): Promise<Esta
     return { erro: analise.error.issues[0]?.message ?? 'Dados inválidos.' };
   }
 
-  const u = await consultaUm<Credenciais>(
+  /** @type {Credenciais|null} */
+  const u = await consultaUm(
     'select id, nome, email, senha_hash, papel, ativo from auth_credenciais($1)',
     [analise.data.email],
   );
@@ -71,8 +83,12 @@ const esquemaEmail = z.object({ email: z.string().trim().email('Informe um e-mai
  *
  * Responde sempre a mesma coisa, exista ou não a conta, para o formulário não
  * virar um verificador de e-mails cadastrados.
+ *
+ * @param {EstadoForm} _estado
+ * @param {FormData} dados
+ * @returns {Promise<EstadoForm>}
  */
-export async function pedirRecuperacao(_estado: EstadoForm, dados: FormData): Promise<EstadoForm> {
+export async function pedirRecuperacao(_estado, dados) {
   const analise = esquemaEmail.safeParse({ email: dados.get('email') });
   if (!analise.success) {
     return { erro: analise.error.issues[0]?.message ?? 'Dados inválidos.' };
@@ -112,8 +128,14 @@ const esquemaNovaSenha = z.object({
   message: 'As duas senhas não conferem.', path: ['confirmacao'],
 });
 
-/** RF02 — gravar a nova senha. O token só vale uma vez. */
-export async function redefinirSenha(_estado: EstadoForm, dados: FormData): Promise<EstadoForm> {
+/**
+ * RF02 — gravar a nova senha. O token só vale uma vez.
+ *
+ * @param {EstadoForm} _estado
+ * @param {FormData} dados
+ * @returns {Promise<EstadoForm>}
+ */
+export async function redefinirSenha(_estado, dados) {
   const analise = esquemaNovaSenha.safeParse({
     token: dados.get('token'),
     senha: dados.get('senha'),
@@ -123,7 +145,7 @@ export async function redefinirSenha(_estado: EstadoForm, dados: FormData): Prom
     return { erro: analise.error.issues[0]?.message ?? 'Dados inválidos.' };
   }
 
-  const linha = await consultaUm<{ auth_usar_token_recuperacao: string | null }>(
+  const linha = await consultaUm(
     'select auth_usar_token_recuperacao($1)', [hashToken(analise.data.token)],
   );
   const usuarioId = linha?.auth_usar_token_recuperacao ?? null;
@@ -139,7 +161,8 @@ export async function redefinirSenha(_estado: EstadoForm, dados: FormData): Prom
   return { sucesso: 'Senha alterada. Você já pode entrar com a nova senha.' };
 }
 
-export async function sair(): Promise<void> {
+/** @returns {Promise<void>} */
+export async function sair() {
   await encerrarSessao();
   revalidatePath('/', 'layout');
   redirect('/login');

@@ -2,8 +2,10 @@
  * Moldura das telas públicas de acesso. A estilização definitiva vem do
  * design system da trilha de UX/UI — aqui fica só o mínimo para o fluxo
  * funcionar e ser testável.
+ *
+ * @param {{ children: React.ReactNode }} props
  */
-export default function LayoutAuth({ children }: { children: React.ReactNode }) {
+export default function LayoutAuth({ children }) {
   return (
     <div className="auth-palco">
       <main className="auth-cartao">

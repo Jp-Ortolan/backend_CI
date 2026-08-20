@@ -1,17 +1,18 @@
-import { comUsuario } from '@/lib/db/consulta';
-import { exigirPermissao } from '@/lib/auth/sessao';
-import { ROTULO_PAPEL } from '@/lib/dominio/permissoes';
+import { comUsuario } from '@/lib/db/consulta.js';
+import { exigirPermissao } from '@/lib/auth/sessao.js';
+import { ROTULO_PAPEL } from '@/lib/dominio/permissoes.js';
 
 export const dynamic = 'force-dynamic';
 
-interface Indicadores {
-  instituicoes_ativas: string;
-  instituicoes_inativas: string;
-  instituicoes_em_processo: string;
-  representantes_ativos: string;
-  reunioes_realizadas: string;
-  media_presenca: string | null;
-}
+/**
+ * @typedef {object} Indicadores
+ * @property {string} instituicoes_ativas
+ * @property {string} instituicoes_inativas
+ * @property {string} instituicoes_em_processo
+ * @property {string} representantes_ativos
+ * @property {string} reunioes_realizadas
+ * @property {string|null} media_presenca
+ */
 
 /**
  * Dashboard mínimo, para provar que a corrente inteira funciona:
@@ -21,11 +22,13 @@ interface Indicadores {
 export default async function PaginaDashboard() {
   const usuario = await exigirPermissao('indicador', 'ver');
 
+  /** @type {Indicadores|null} */
   const ind = await comUsuario(usuario.id, (tx) =>
-    tx.consultaUm<Indicadores>('select * from vw_dashboard'),
+    tx.consultaUm('select * from vw_dashboard'),
   );
 
-  const CARTOES: [string, string][] = ind ? [
+  /** @type {[string, string][]} */
+  const CARTOES = ind ? [
     ['Instituições ativas', ind.instituicoes_ativas],
     ['Inativas', ind.instituicoes_inativas],
     ['Em processo', ind.instituicoes_em_processo],

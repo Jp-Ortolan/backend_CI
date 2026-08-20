@@ -1,11 +1,15 @@
 'use client';
 
 import { useFormState, useFormStatus } from 'react-dom';
-import { entrar, pedirRecuperacao, redefinirSenha, type EstadoForm } from './acoes';
+import { entrar, pedirRecuperacao, redefinirSenha } from './acoes.js';
 
-const INICIAL: EstadoForm = {};
+/** @type {import('./acoes.js').EstadoForm} */
+const INICIAL = {};
 
-function Botao({ children }: { children: React.ReactNode }) {
+/**
+ * @param {{ children: React.ReactNode }} props
+ */
+function Botao({ children }) {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="btn" disabled={pending} aria-busy={pending}>
@@ -14,13 +18,19 @@ function Botao({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Mensagem({ estado }: { estado: EstadoForm }) {
+/**
+ * @param {{ estado: import('./acoes.js').EstadoForm }} props
+ */
+function Mensagem({ estado }) {
   if (estado.erro) return <p className="msg erro" role="alert">{estado.erro}</p>;
   if (estado.sucesso) return <p className="msg ok" role="status">{estado.sucesso}</p>;
   return null;
 }
 
-export function FormLogin({ redirecionar }: { redirecionar?: string }) {
+/**
+ * @param {{ redirecionar?: string }} props
+ */
+export function FormLogin({ redirecionar }) {
   const [estado, acao] = useFormState(entrar, INICIAL);
   return (
     <form action={acao} className="form">
@@ -56,7 +66,10 @@ export function FormRecuperar() {
   );
 }
 
-export function FormRedefinir({ token }: { token: string }) {
+/**
+ * @param {{ token: string }} props
+ */
+export function FormRedefinir({ token }) {
   const [estado, acao] = useFormState(redefinirSenha, INICIAL);
   return (
     <form action={acao} className="form">

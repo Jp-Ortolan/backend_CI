@@ -2,18 +2,18 @@
   "name": "ecossistema-inovacao",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "description": "Sistema de Gestão do Ecossistema de Inovação — Centro de Inovação",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
     "db:migrar": "./scripts/migrar.sh",
     "db:resetar": "./scripts/resetar.sh",
     "db:testar": "./scripts/testar-banco.sh",
-    "test:dominio": "node --import tsx --test tests/permissoes.test.ts",
-    "test:integracao": "node --import tsx --test tests/integracao.test.ts"
+    "test:dominio": "node --test tests/permissoes.test.js",
+    "test:integracao": "node --test tests/integracao.test.js"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",
@@ -24,13 +24,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/node": "^20.16.11",
-    "@types/pg": "^8.23.1",
-    "@types/react": "^18.3.11",
-    "@types/react-dom": "^18.3.0",
     "eslint": "^8.57.1",
-    "eslint-config-next": "14.2.15",
-    "tsx": "^4.23.12",
-    "typescript": "^5.6.3"
+    "eslint-config-next": "14.2.15"
   }
 }

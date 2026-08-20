@@ -1,12 +1,15 @@
 import './globals.css';
-import type { Metadata } from 'next';
 
-export const metadata: Metadata = {
+/** @type {import('next').Metadata} */
+export const metadata = {
   title: 'Ecossistema de Inovação',
   description: 'Sistema de Gestão do Ecossistema de Inovação — Centro de Inovação',
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/**
+ * @param {{ children: React.ReactNode }} props
+ */
+export default function RootLayout({ children }) {
   return (
     <html lang="pt-BR">
       <body>{children}</body>
