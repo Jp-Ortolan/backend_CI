@@ -20,6 +20,7 @@ npm install
 # banco local em Docker (pule se já tiver Postgres instalado)
 docker run --name eco-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16
 
+# troque "postgres:postgres" pelo usuário:senha da SUA instalação
 export DATABASE_URL_ADMIN="postgresql://postgres:postgres@localhost:5432/postgres"
 ./scripts/resetar.sh          # cria tudo do zero e carrega dados de exemplo
 
