@@ -22,7 +22,7 @@ atualização cadastral — não integram o MVP.
 
 | Nível | O que cobre | Quem executa | Quando |
 |---|---|---|---|
-| Banco | Constraints, triggers e cálculo das views | Automatizado (`tests/*.sql`) | Todo push e PR |
+| Banco | Constraints, triggers e cálculo das views | Automatizado (`testes/banco/*.sql`) | Todo push e PR |
 | Funcional | Casos de teste manuais sobre a interface | QA | Ao fim de cada semana |
 | Integração | Fluxo completo front + back em homologação | QA | Semana 6 |
 | Segurança | Permissão por perfil, RLS, exposição de dados | QA + Back-end | Semana 6 |
@@ -31,8 +31,8 @@ atualização cadastral — não integram o MVP.
 
 ### Sobre o nível de banco
 
-As regras que o banco garante estão em `tests/01-regras-de-negocio.sql` e
-`tests/02-indicadores.sql`. Cada teste tenta violar uma regra e falha se o banco
+As regras que o banco garante estão em `testes/banco/01-regras-de-negocio.sql` e
+`testes/banco/02-indicadores.sql`. Cada teste tenta violar uma regra e falha se o banco
 aceitar. Rodam no CI a cada PR, então uma regressão aparece antes da revisão.
 
 Rodar localmente:
@@ -48,7 +48,7 @@ cobrar teste novo quando uma regra nova entra.
 
 | Uso | Ferramenta |
 |---|---|
-| Regra de negócio no banco | psql + scripts em `tests/` (já configurado) |
+| Regra de negócio no banco | psql + scripts em `testes/` (já configurado) |
 | Registro de defeito | Issues do GitHub, template `bug.md` |
 | Acompanhamento dos casos | Este repositório (`qa/02-casos-de-teste.md`) |
 | Teste de API | Insomnia ou Postman, coleção compartilhada |

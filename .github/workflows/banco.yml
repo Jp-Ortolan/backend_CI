@@ -7,9 +7,9 @@ name: Banco de dados
 on:
   push:
     branches: [main, develop]
-    paths: ['db/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
+    paths: ['banco/**', 'testes/**', 'scripts/**', '.github/workflows/banco.yml']
   pull_request:
-    paths: ['db/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
+    paths: ['banco/**', 'testes/**', 'scripts/**', '.github/workflows/banco.yml']
 
 jobs:
   migrations-e-testes:
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Conferir nomes e ordem
         run: |
-          cd db/migrations
+          cd banco/migrations
           for f in *.sql; do
             if ! echo "$f" | grep -qE '^[0-9]{3}_[a-z0-9_]+\.sql$'; then
               echo "::error::nome fora do padrão: $f (use 011_descricao.sql)"

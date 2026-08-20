@@ -26,17 +26,17 @@ psql -d postgres -q -c "drop database if exists $BANCO;"
 psql -d postgres -q -c "create database $BANCO;"
 
 echo "==> aplicando migrations"
-for f in "$RAIZ"/db/migrations/*.sql; do
+for f in "$RAIZ"/banco/migrations/*.sql; do
   echo "    - $(basename "$f")"
   $PSQL -f "$f"
 done
 
 echo "==> aplicando seed"
-$PSQL -f "$RAIZ/db/seed.sql"
+$PSQL -f "$RAIZ/banco/seed.sql"
 
 echo "==> rodando testes"
 SAIDA=$(mktemp)
-for f in "$RAIZ"/tests/*.sql; do
+for f in "$RAIZ"/testes/banco/*.sql; do
   echo ""
   echo "--- $(basename "$f") ---"
   if psql -v ON_ERROR_STOP=1 -q -d "$BANCO" -f "$f" > "$SAIDA" 2>&1; then

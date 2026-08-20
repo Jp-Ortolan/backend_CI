@@ -6,12 +6,12 @@ A regra vive em **dois lugares e precisa ser mudada nos dois**:
 
 | Onde | Papel |
 |---|---|
-| `lib/dominio/permissoes.js` | Decide o que a interface mostra e o que a Server Action aceita |
-| `db/migrations/007_seguranca_rls.sql` | Decide o que o banco aceita, independente da aplicação |
+| `src/dominio/permissoes.js` | Decide o que a interface mostra e o que a Server Action aceita |
+| `banco/migrations/001_estrutura_inicial.sql` (parte 7) | Decide o que o banco aceita, independente da aplicação |
 
 A interface esconder um botão não é controle de acesso — é conforto. Quem protege
 o dado é o RLS. Por isso as duas camadas dizem a mesma coisa, e há um teste
-automatizado (`tests/01-regras-de-negocio.sql`) que falha se elas divergirem.
+automatizado (`testes/banco/01-regras-de-negocio.sql`) que falha se elas divergirem.
 
 ---
 
@@ -92,14 +92,14 @@ nos botões de ação.
 
 ```ts
 // Server Component ou Server Action
-import { exigirPermissao } from '@/lib/auth/sessao';
+import { exigirPermissao } from '@/infraestrutura/seguranca/sessao.js';
 const usuario = await exigirPermissao('instituicao', 'editar');
 // sem permissão, redireciona para /sem-permissao antes de qualquer consulta
 ```
 
 ```tsx
 // Mostrar ou esconder um botão
-import { pode } from '@/lib/dominio/permissoes';
+import { pode } from '@/dominio/permissoes.js';
 {pode(usuario.papel, 'instituicao', 'criar') && <BotaoNovaInstituicao />}
 ```
 
@@ -126,9 +126,9 @@ o padrão é `leitura` — ninguém ganha permissão de escrita sozinho.
 
 | Teste | Onde | O que garante |
 |---|---|---|
-| 11 testes da matriz | `tests/permissoes.test.js` | Gestor não exclui, consulta não escreve, menu correto por perfil |
-| 9 testes de acesso no banco | `tests/03-seguranca.sql` | Conecta como `app_web` e confere o que cada perfil consegue de fato fazer |
-| Sessão e RLS ponta a ponta | `tests/integracao.test.js` | Hash confere, sessão vale, `papel_atual()` devolve o papel certo |
+| 11 testes da matriz | `testes/dominio/permissoes.test.js` | Gestor não exclui, consulta não escreve, menu correto por perfil |
+| 9 testes de acesso no banco | `testes/banco/03-seguranca.sql` | Conecta como `app_web` e confere o que cada perfil consegue de fato fazer |
+| Sessão e RLS ponta a ponta | `testes/integracao/autenticacao.test.js` | Hash confere, sessão vale, `papel_atual()` devolve o papel certo |
 
 ---
 

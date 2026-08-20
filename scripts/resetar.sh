@@ -27,12 +27,12 @@ echo "==> recriando o schema public"
 "${PSQL[@]}" -c "drop schema public cascade; create schema public;"
 
 echo "==> aplicando migrations"
-for f in "$RAIZ"/db/migrations/*.sql; do
+for f in "$RAIZ"/banco/migrations/*.sql; do
   echo "    - $(basename "$f")"
   "${PSQL[@]}" -f "$f"
 done
 
 echo "==> aplicando seed"
-"${PSQL[@]}" -f "$RAIZ/db/seed.sql"
+"${PSQL[@]}" -f "$RAIZ/banco/seed.sql"
 
 echo "==> pronto"

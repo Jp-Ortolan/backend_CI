@@ -12,8 +12,8 @@
     "db:migrar": "./scripts/migrar.sh",
     "db:resetar": "./scripts/resetar.sh",
     "db:testar": "./scripts/testar-banco.sh",
-    "test:dominio": "node --test tests/permissoes.test.js",
-    "test:integracao": "node --test tests/integracao.test.js"
+    "test:dominio": "node --test \"testes/dominio/*.test.js\"",
+    "test:integracao": "node --test \"testes/integracao/*.test.js\""
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",
