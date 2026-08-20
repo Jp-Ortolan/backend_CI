@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { criarClienteServidor } from '@/lib/supabase/servidor';
+import { comUsuario } from '@/lib/db/consulta';
+import { usuarioAtual } from '@/lib/auth/sessao';
+import { pode } from '@/lib/dominio/permissoes';
 import { ErroDeNegocio } from '@/lib/dominio/erros';
 import { ok, falha } from '@/lib/dominio/resposta';
 
@@ -19,55 +21,47 @@ const corpo = z.object({
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const supabase = criarClienteServidor();
-
-    const { data: sessao } = await supabase.auth.getUser();
-    if (!sessao.user) {
-      throw new ErroDeNegocio('NAO_AUTENTICADO', 'É preciso estar autenticado.');
+    const usuario = await usuarioAtual();
+    if (!usuario) throw new ErroDeNegocio('NAO_AUTENTICADO', 'É preciso estar autenticado.');
+    if (!pode(usuario.papel, 'vinculo', 'encerrar')) {
+      throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite encerrar vínculos.');
     }
 
     const analise = corpo.safeParse(await req.json().catch(() => null));
     if (!analise.success) {
-      throw new ErroDeNegocio(
-        'DADOS_INVALIDOS',
-        analise.error.issues[0]?.message ?? 'Dados inválidos.',
-      );
+      throw new ErroDeNegocio('DADOS_INVALIDOS',
+        analise.error.issues[0]?.message ?? 'Dados inválidos.');
     }
     const { dataFim, observacoes } = analise.data;
 
-    const { data: vinculo, error: erroBusca } = await supabase
-      .from('vinculo')
-      .select('id, status, data_inicio')
-      .eq('id', params.id)
-      .maybeSingle();
-
-    if (erroBusca) throw erroBusca;
-    if (!vinculo) {
-      throw new ErroDeNegocio('VINCULO_INVALIDO', 'Vínculo não encontrado.');
-    }
-    if (vinculo.status === 'encerrado') {
-      throw new ErroDeNegocio('VINCULO_JA_ENCERRADO', 'Este vínculo já está encerrado.');
-    }
-    if (dataFim < vinculo.data_inicio) {
-      throw new ErroDeNegocio(
-        'DATA_FIM_ANTERIOR_AO_INICIO',
-        `A data de encerramento não pode ser anterior a ${vinculo.data_inicio}.`,
+    return await comUsuario(usuario.id, async (tx) => {
+      const atual = await tx.consultaUm<{ id: string; status: string; data_inicio: string }>(
+        'select id, status, data_inicio from vinculo where id = $1', [params.id],
       );
-    }
 
-    const { data, error } = await supabase
-      .from('vinculo')
-      .update({
-        status: 'encerrado',
-        data_fim: dataFim,
-        ...(observacoes ? { observacoes } : {}),
-      })
-      .eq('id', params.id)
-      .select('id, status, data_fim')
-      .single();
+      if (!atual) throw new ErroDeNegocio('VINCULO_INVALIDO', 'Vínculo não encontrado.');
+      if (atual.status === 'encerrado') {
+        throw new ErroDeNegocio('VINCULO_JA_ENCERRADO', 'Este vínculo já está encerrado.');
+      }
+      if (dataFim < atual.data_inicio) {
+        throw new ErroDeNegocio('DATA_FIM_ANTERIOR_AO_INICIO',
+          `A data de encerramento não pode ser anterior a ${atual.data_inicio}.`);
+      }
 
-    if (error) throw error;
-    return ok({ id: data.id, status: data.status, dataFim: data.data_fim });
+      const linha = await tx.consultaUm<{ id: string; status: string; data_fim: string }>(
+        `update vinculo
+            set status = 'encerrado', data_fim = $2,
+                observacoes = coalesce($3, observacoes)
+          where id = $1
+      returning id, status, data_fim`,
+        [params.id, dataFim, observacoes ?? null],
+      );
+
+      if (!linha) {
+        throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite esta alteração.');
+      }
+      return ok({ id: linha.id, status: linha.status, dataFim: linha.data_fim });
+    });
   } catch (e) {
     return falha(e);
   }

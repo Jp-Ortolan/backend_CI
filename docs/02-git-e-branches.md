@@ -53,13 +53,18 @@ estado que nenhum comando reproduz, e a diferença só aparece em produção.
 
 Para gerar:
 
-```bash
-supabase migration new descricao_curta
+Crie o arquivo em `db/migrations/` com o próximo número da sequência:
+
+```
+db/migrations/011_descricao_em_minusculas.sql
 ```
 
-Nome de arquivo: `AAAAMMDDHHMMSS_descricao_em_minusculas.sql`. O CI recusa
-qualquer outro formato e recusa timestamps repetidos — o que acontece quando duas
-pessoas criam migration no mesmo minuto em branches diferentes.
+O CI recusa nome fora do padrão e recusa números repetidos — o que acontece
+quando duas pessoas criam migration em branches diferentes. Quem abrir o PR
+depois renumera o próprio arquivo.
+
+O `./scripts/migrar.sh` guarda numa tabela quais arquivos já rodaram, então
+aplicar de novo não repete nada. Há um job de CI que confere essa propriedade.
 
 ## Rotina da semana
 

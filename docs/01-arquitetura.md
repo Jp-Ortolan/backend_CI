@@ -12,38 +12,42 @@
    |   /painel/*  (protegido)     /checkin/<qr_token>   |
    +---------------------------------------------------+
             |                                  |
-            | anon key + JWT                   | Route Handler no servidor
-            | (RLS aplica o perfil)            | (service role, valida o token)
+            | cookie de sessão                 | Route Handler no servidor
+            | (RLS aplica o perfil)            | (função valida o qr_token)
             v                                  v
    +---------------------------------------------------+
-   |                     Supabase                       |
-   |   Postgres  |  Auth  |  Storage  |  Edge Functions |
+   |              PostgreSQL (Railway)                  |
+   |   tabelas · RLS · funções de auth e de check-in    |
    +---------------------------------------------------+
 ```
 
-## Por que Supabase
+## Por que Railway com PostgreSQL puro
 
-O sistema é 90% CRUD sobre um modelo relacional, mais um punhado de consultas
-agregadas. Um back-end próprio significaria reescrever autenticação, controle de
-permissão e camada de acesso a dados — trabalho que não cabe em sete semanas e
-que não é o diferencial do projeto. O diferencial é o fluxo de check-in.
+A equipe já tem prática com a plataforma, e em projeto de sete semanas isso pesa
+mais do que qualquer comparação de recursos: o tempo que não se gasta aprendendo
+ferramenta volta como funcionalidade entregue.
 
-O que ganhamos de pronto: autenticação com recuperação de senha, permissão na
-camada de dados via RLS, storage de arquivos com política de acesso, e um
-Postgres de verdade (com enum, constraint, view e índice trigram) em vez de um
-banco genérico.
+O preço da escolha é que autenticação e recuperação de senha passam a ser
+código nosso — estão em `lib/auth/` e nas funções `auth_*` do banco, com testes.
+
+O que se ganha: o banco local, o de homologação e o de produção são o mesmo
+PostgreSQL, sem nenhuma peça que só exista em uma plataforma. E não existe mais
+nenhuma chave capaz de ignorar todas as regras de acesso.
 
 ## As duas portas de entrada
 
 São caminhos com regras de segurança diferentes, e isso é proposital:
 
-**Painel** — exige login. O cliente usa a `anon key`; quem decide o que cada
-pessoa enxerga é o RLS, não o front-end. Um bug de tela não vira vazamento.
+**Painel** — exige login. Cada requisição abre uma transação declarando quem é o
+usuário (`set_config('app.usuario_id', …, true)`), e a partir daí o RLS decide o
+que aquela pessoa enxerga. Um bug de tela não vira vazamento.
 
 **Check-in público** — não exige login, porque exigir cadastro do participante
-mataria a proposta. A página em `/checkin/<qr_token>` chama um Route Handler no
-servidor, que valida o token e a janela de horário antes de gravar. A `service
-role key` só existe nesse caminho e nunca chega ao navegador.
+mataria a proposta. A página em `/checkin/<qr_token>` chama um Route Handler que
+executa `checkin_registrar(...)`, uma função SECURITY DEFINER: ela roda com
+privilégio elevado, mas faz **só** o que está escrito nela — validar o token,
+conferir a janela, resolver o vínculo da data e gravar. Não existe chave-mestra
+para vazar.
 
 ## Organização de pastas (proposta)
 
@@ -58,27 +62,36 @@ app/
   api/
     checkin/route.ts        grava presença com service role
 lib/
-  supabase/
-    cliente.ts              browser client (anon)
-    servidor.ts             server client (anon + cookies)
-    admin.ts                service role — importar SÓ em código de servidor
-  dominio/                  regras de negócio em TypeScript
-  tipos.ts                  gerado por: supabase gen types typescript
+  db/
+    pool.ts                 pool de conexões (pg)
+    consulta.ts             consulta() e comUsuario() — a transação com RLS
+  auth/
+    senha.ts                hash e conferência Argon2id
+    tokens.ts               sorteio e hash de tokens de sessão e recuperação
+    sessao.ts               abrir, ler, encerrar sessão; exigirUsuario
+  dominio/                  regras de negócio e matriz de permissões
+  email/enviar.ts           adaptador de envio (terminal ou provedor)
 components/
-supabase/
+db/
   migrations/               histórico versionado do banco
   seed.sql
 tests/                      testes SQL de regra de negócio
 ```
 
-## Regra que não se negocia
+## Duas regras que não se negociam
 
-`lib/supabase/admin.ts` (service role) só pode ser importado em Route Handler,
-Server Action ou Edge Function. Se aparecer num componente de cliente, a chave
-que ignora todo o RLS vai para o navegador.
+**A aplicação nunca conecta como dono do banco.** No PostgreSQL, o dono das
+tabelas ignora o RLS. A `DATABASE_URL` da aplicação usa `app_web`, que não é
+dono de nada. Migrations e seeds rodam com o usuário dono, por outra variável
+(`DATABASE_URL_ADMIN`), e só em script.
 
-Sugestão para o DevOps: incluir no CI uma verificação que falhe se
-`SUPABASE_SERVICE_ROLE_KEY` aparecer em arquivo com `"use client"`.
+**Nada de `lib/db` em componente de cliente.** Há um job de CI que falha se
+`DATABASE_URL` ou `lib/db/` aparecerem num arquivo com `"use client"`.
+
+E uma armadilha do próprio PostgreSQL que vale conhecer: quando falta política
+de INSERT, ele levanta erro; quando falta a de UPDATE ou DELETE, ele apenas não
+enxerga a linha e afeta zero registros, em silêncio. Por isso os testes de
+permissão conferem o efeito, não a exceção.
 
 ## Decisões de modelagem que a aplicação precisa respeitar
 

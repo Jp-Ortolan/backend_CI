@@ -10,34 +10,64 @@ registro de participação por QR Code.
 
 ## Começar aqui
 
+Precisa de **Node 20+** e um **PostgreSQL 15+** (na máquina ou em Docker).
+
 ```bash
 git clone <url-do-repositorio>
 cd ecossistema-inovacao
+npm install
 
-npm install                    # dependências da aplicação
-npm install -g supabase        # CLI, uma vez por máquina
+# banco local em Docker (pule se já tiver Postgres instalado)
+docker run --name eco-pg -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:16
 
-supabase init
-supabase start                 # precisa do Docker aberto
-supabase db reset              # aplica migrations + seed
+export DATABASE_URL_ADMIN="postgresql://postgres:postgres@localhost:5432/postgres"
+./scripts/resetar.sh          # cria tudo do zero e carrega dados de exemplo
 
-cp .env.example .env.local     # preencher com o que o "supabase start" imprimiu
+# senha do usuário que a aplicação usa (não é o dono do banco — ver adiante)
+psql "$DATABASE_URL_ADMIN" -c "alter role app_web with login password 'app';"
 
-npm run test:dominio           # testes das regras em TypeScript
-npm run db:testar              # testes das regras no banco
-npm run dev                    # http://localhost:3000
+cp .env.example .env.local    # ajuste DATABASE_URL para o app_web
+npm run dev                   # http://localhost:3000
 ```
 
-Studio local: `http://127.0.0.1:54323`
+O seed já traz três acessos prontos, todos com a senha **`senha123456`**:
 
-Sem Docker? Dá para usar um Postgres comum:
+| E-mail | Perfil |
+|---|---|
+| `ana@centroinovacao.br` | Administrador |
+| `carla@centroinovacao.br` | Gestor |
+| `bruno@centroinovacao.br` | Consulta |
 
-```bash
-PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=suasenha \
-STUB=1 ./scripts/testar-banco.sh
-```
+Entre com cada um para ver o menu mudar — é a matriz de permissões funcionando.
 
-O `STUB=1` cria um `auth.uid()` falso, porque essa função só existe no Supabase.
+---
+
+## Comandos
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Sobe a aplicação em desenvolvimento |
+| `npm run db:migrar` | Aplica as migrations que ainda não rodaram |
+| `npm run db:resetar` | Apaga e recria o banco local com seed (recusa rodar fora de localhost) |
+| `npm run db:testar` | 36 testes de regra, acesso e check-in direto no banco |
+| `npm run test:dominio` | 11 testes da matriz de permissões |
+| `npm run test:integracao` | 8 testes de autenticação contra um banco real |
+| `npm run typecheck` | Verificação de tipos |
+
+---
+
+## Os dois usuários do banco
+
+No PostgreSQL, o **dono** das tabelas ignora o RLS. Se a aplicação conectasse
+como dono, todo o controle de acesso viraria enfeite.
+
+| Usuário | Para quê | Variável |
+|---|---|---|
+| `postgres` (dono) | Migrations, seeds, criar usuário | `DATABASE_URL_ADMIN` |
+| `app_web` (não é dono) | A aplicação | `DATABASE_URL` |
+
+A migration 007 cria o `app_web` sem senha; quem define é o DevOps, para a senha
+não ficar no repositório. Detalhes em [docs/03-ambientes.md](docs/03-ambientes.md).
 
 ---
 
@@ -45,16 +75,17 @@ O `STUB=1` cria um `auth.uid()` falso, porque essa função só existe no Supaba
 
 | Pasta | Conteúdo | Trilha |
 |---|---|---|
-| `app/api/` | Route Handlers: check-in, encerrar vínculo, encerrar reunião | Back-end |
-| `lib/supabase/` | Clientes do Supabase (navegador, servidor e admin) | Back-end |
-| `lib/dominio/` | Regras de negócio em TypeScript e formato de erro | Back-end |
-| `supabase/migrations/` | Estrutura do banco, versionada | Back-end |
-| `supabase/seed.sql` | Dados de exemplo para desenvolvimento | Back-end |
-| `tests/` | Testes SQL de regra de negócio e testes TypeScript do domínio | QA + Back-end |
-| `scripts/` | `testar-banco.sh` e o stub de auth local | DevOps |
-| `.github/workflows/` | CI: migrations, testes e verificação da aplicação | DevOps |
-| `docs/` | Arquitetura, padrões de Git, ambientes e contrato de API | Todas |
-| `qa/` | Plano de testes, 45 casos, definição de pronto | QA |
+| `db/migrations/` | As 10 migrations, numeradas e em ordem | Back-end |
+| `db/seed.sql` | Dados de exemplo para desenvolver | Back-end |
+| `app/(auth)/` | Login, recuperar senha, redefinir senha | Back-end |
+| `app/(painel)/` | Área logada | Front-end daqui pra frente |
+| `app/api/` | Check-in por QR Code e encerramentos | Back-end |
+| `lib/db/` | Pool e a transação que declara o usuário para o RLS | Back-end |
+| `lib/auth/` | Argon2id, tokens, sessão | Back-end |
+| `lib/dominio/` | Regras de negócio e matriz de permissões | Back-end |
+| `tests/` | Os 55 testes | Back-end + QA |
+| `docs/` | Arquitetura, Git, ambientes, API, permissões | Todos |
+| `qa/` | Plano de testes e os 45 casos | QA |
 
 ---
 
@@ -64,11 +95,11 @@ O `STUB=1` cria um `auth.uid()` falso, porque essa função só existe no Supaba
 |---|---|
 | [Arquitetura](docs/01-arquitetura.md) | Todos — leitura obrigatória antes do primeiro PR |
 | [Git e branches](docs/02-git-e-branches.md) | Todos |
-| [Ambientes e infraestrutura](docs/03-ambientes.md) | DevOps |
+| [Ambientes e Railway](docs/03-ambientes.md) | DevOps |
 | [Contrato de API](docs/04-contrato-de-api.md) | Back-end e Front-end |
+| [Perfis de acesso](docs/05-permissoes.md) | Todos |
 | [Plano de testes](qa/01-plano-de-testes.md) | QA |
 | [Casos de teste](qa/02-casos-de-teste.md) | QA |
-| [Definição de pronto](qa/03-definicao-de-pronto.md) | Todos |
 
 ---
 
@@ -79,8 +110,8 @@ Valem para qualquer código que toque o banco:
 1. **Representante é vínculo, não pessoa.** A pessoa existe sozinha; o que a liga
    a uma instituição é a tabela `vinculo`, com período. Encerrar vínculo nunca
    apaga linha.
-2. **Presença é snapshot.** No check-in, copie `vinculo_id`, `instituicao_id` e
-   `cargo_no_momento`. Nunca deduza a instituição de uma presença antiga pelo
+2. **Presença é snapshot.** No check-in, grava-se `vinculo_id`, `instituicao_id`
+   e `cargo_no_momento`. Nunca deduza a instituição de uma presença antiga pelo
    vínculo atual.
 3. **Indicador não se armazena.** Percentual e totais saem das views `vw_*`.
 4. **Convidado não tem vínculo.** O banco recusa — a aplicação não deve tentar.
@@ -92,53 +123,22 @@ de instituição reescreve o histórico das reuniões passadas.
 
 ## Mexer no banco
 
+Crie o próximo arquivo numerado em `db/migrations/` e rode:
+
 ```bash
-supabase migration new descricao_curta   # cria o arquivo com timestamp
-# escrever o SQL
-supabase db reset                        # recria do zero e valida
-./scripts/testar-banco.sh                # roda os testes
+./scripts/migrar.sh      # aplica só o que falta
+./scripts/testar-banco.sh
 ```
 
-**Nunca edite uma migration já aplicada em outro ambiente.** Crie uma nova. O CI
-recusa nome fora do padrão e timestamp repetido.
-
-Regra de negócio nova pede teste novo em `tests/`. É o que impede uma regressão
-silenciosa no cálculo de participação.
-
----
-
-## Comandos
-
-| Comando | O que faz |
-|---|---|
-| `npm run dev` | Sobe a aplicação em desenvolvimento |
-| `npm run test:dominio` | 11 testes das regras de negócio em TypeScript |
-| `npm run db:testar` | 17 testes de regra e indicadores direto no banco |
-| `npm run db:reset` | Recria o banco local com migrations + seed |
-| `npm run db:tipos` | Regenera `lib/tipos-banco.ts` a partir do banco local |
-| `npm run typecheck` | Verificação de tipos sem gerar build |
-
----
-
-## Rotas já implementadas
-
-| Rota | Método | Requisito |
-|---|---|---|
-| `/api/checkin/[token]` | GET | RF27 — dados públicos da reunião |
-| `/api/checkin/[token]` | POST | RF29 a RF34 — registrar presença |
-| `/api/checkin/[token]/buscar` | GET | RF28 — buscar participante pelo nome |
-| `/api/vinculos/[id]/encerrar` | POST | RF16 — encerrar vínculo |
-| `/api/reunioes/[id]/encerrar` | POST | RF39 — encerrar e marcar ausentes |
-
-O CRUD comum (instituições, representantes, reuniões, indicadores) sai direto
-pelo SDK do Supabase com RLS — não precisa de rota própria. Ver
-[contrato de API](docs/04-contrato-de-api.md).
+**Nunca edite uma migration já aplicada em outro ambiente.** O script guarda numa
+tabela quais arquivos já rodaram; editar um deles deixa o banco de cada pessoa em
+um estado diferente, e a diferença só aparece em produção.
 
 ---
 
 ## Stack
 
-Next.js (App Router) · Supabase (PostgreSQL, Auth, Storage) · Vercel · GitHub Actions
+Next.js 14 (App Router) · PostgreSQL no Railway · `pg` · Argon2id · GitHub Actions
 
 ## Equipe
 

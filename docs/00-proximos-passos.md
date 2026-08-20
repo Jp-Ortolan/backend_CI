@@ -1,3 +1,7 @@
+> **Documento histórico — 18/08/2026.** Escrito quando a plataforma prevista
+> ainda era Supabase. A stack de banco mudou para Railway em 20/08; o que vale
+> hoje está em [03-ambientes.md](03-ambientes.md).
+
 # Próximos passos — de 18/08 até a reunião de 27/08
 
 Onde estamos: **terça, 18/08**, dia 6 da Semana 1. A reunião é **quinta, 20/08**,

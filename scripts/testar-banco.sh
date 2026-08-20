@@ -4,39 +4,35 @@
 #
 #   ./scripts/testar-banco.sh
 #
-# Variáveis (com valores padrão para o Supabase local):
-#   PGHOST=127.0.0.1 PGPORT=54322 PGUSER=postgres PGPASSWORD=postgres
-#   BANCO=ecossistema_teste  STUB=1  (STUB=1 cria auth.uid() falso; use 0 no Supabase)
+# Variáveis (padrão = Postgres local):
+#   PGHOST=localhost PGPORT=5432 PGUSER=postgres PGPASSWORD=postgres
+#   BANCO=ecossistema_teste
+#
+# No Railway, exporte as variáveis da aba Variables antes de rodar.
 # =============================================================================
 set -euo pipefail
 
-export PGHOST="${PGHOST:-127.0.0.1}"
-export PGPORT="${PGPORT:-54322}"
+export PGHOST="${PGHOST:-localhost}"
+export PGPORT="${PGPORT:-5432}"
 export PGUSER="${PGUSER:-postgres}"
 export PGPASSWORD="${PGPASSWORD:-postgres}"
 BANCO="${BANCO:-ecossistema_teste}"
-STUB="${STUB:-1}"
 
 RAIZ="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PSQL="psql -v ON_ERROR_STOP=1 -q -d $BANCO"
 
 echo "==> recriando o banco $BANCO em $PGHOST:$PGPORT"
-psql -d postgres -q -c "drop database if exists $BANCO;" 
+psql -d postgres -q -c "drop database if exists $BANCO;"
 psql -d postgres -q -c "create database $BANCO;"
 
-if [ "$STUB" = "1" ]; then
-  echo "==> aplicando o stub de auth.uid() (Postgres comum)"
-  $PSQL -f "$RAIZ/scripts/00-stub-auth-local.sql"
-fi
-
 echo "==> aplicando migrations"
-for f in "$RAIZ"/supabase/migrations/*.sql; do
+for f in "$RAIZ"/db/migrations/*.sql; do
   echo "    - $(basename "$f")"
   $PSQL -f "$f"
 done
 
 echo "==> aplicando seed"
-$PSQL -f "$RAIZ/supabase/seed.sql"
+$PSQL -f "$RAIZ/db/seed.sql"
 
 echo "==> rodando testes"
 SAIDA=$(mktemp)

@@ -9,21 +9,23 @@
     "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "db:reset": "supabase db reset",
+    "db:migrar": "./scripts/migrar.sh",
+    "db:resetar": "./scripts/resetar.sh",
     "db:testar": "./scripts/testar-banco.sh",
-    "db:tipos": "supabase gen types typescript --local > lib/tipos-banco.ts",
-    "test:dominio": "node --import tsx --test tests/dominio.test.ts tests/permissoes.test.ts"
+    "test:dominio": "node --import tsx --test tests/permissoes.test.ts",
+    "test:integracao": "node --import tsx --test tests/integracao.test.ts"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.5.2",
-    "@supabase/supabase-js": "^2.45.4",
+    "@node-rs/argon2": "^2.1.0",
     "next": "14.2.15",
+    "pg": "^8.23.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@types/node": "^20.16.11",
+    "@types/pg": "^8.23.1",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
     "eslint": "^8.57.1",

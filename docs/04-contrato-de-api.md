@@ -3,9 +3,10 @@
 O front-end precisa disso definido antes de começar as telas. Enquanto as rotas
 não existem, ele trabalha com mock em cima destes formatos.
 
-Com Supabase, boa parte do CRUD sai direto do client SDK aplicando RLS. Route
-Handler próprio só onde há regra de negócio que não cabe numa policy — que é
-exatamente onde este documento se concentra.
+Toda leitura e escrita passa por Server Component ou Server Action, dentro de
+`comUsuario(...)` — a transação que declara quem é o usuário para o RLS. Route
+Handler próprio existe só onde há regra que não cabe numa policy, e é neles que
+este documento se concentra.
 
 ## Convenções
 
@@ -15,19 +16,19 @@ exatamente onde este documento se concentra.
 - `codigo` é estável e serve para o front decidir o que mostrar; `mensagem` é
   texto em português e pode mudar.
 
-## Direto pelo SDK (sem rota própria)
+## Direto por consulta (sem rota própria)
 
-| Operação | Chamada | Requisito |
+| Operação | Consulta | Requisito |
 |---|---|---|
-| Listar instituições com filtro | `from('instituicao').select().eq('status', ...)` | RF11, RF12 |
-| Detalhe da instituição | `select('*, vinculo(*, pessoa(*)), documento(*)')` | RF08 |
+| Listar instituições com filtro | `select ... from instituicao where status = $1` | RF11, RF12 |
+| Detalhe da instituição | `instituicao` + `vinculo` + `pessoa` + `documento` | RF08 |
 | Criar / editar instituição | `insert` / `update` | RF06, RF07 |
-| Listar reuniões | `from('reuniao').select()` | RF24 |
-| Indicadores | `from('vw_dashboard').select().single()` | RF46 |
-| Histórico por representante | `from('vw_participacao_representante').select()` | RF41 |
+| Listar reuniões | `select ... from reuniao` | RF24 |
+| Indicadores | `select * from vw_dashboard` | RF46 |
+| Histórico por representante | `select * from vw_participacao_representante` | RF41 |
 
-O RLS já garante que só admin e gestor escrevem. Não replicar essa checagem no
-front como se fosse segurança — lá é só experiência de uso.
+Tudo dentro de `comUsuario(usuario.id, tx => ...)`. O RLS garante que só admin e
+gestor escrevem — esconder um botão no front é conforto, não segurança.
 
 ---
 

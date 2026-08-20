@@ -2,10 +2,11 @@ import { redirect } from 'next/navigation';
 import { usuarioAtual } from '@/lib/auth/sessao';
 import { FormLogin } from '../formularios';
 
+export const dynamic = 'force-dynamic';
+
 const MENSAGENS: Record<string, string> = {
-  inativo: 'Este acesso está desativado. Fale com a coordenação.',
-  link_expirado: 'O link expirou. Peça a recuperação de senha novamente.',
-  link_invalido: 'Link inválido.',
+  sessao_expirada: 'Sua sessão expirou. Entre novamente.',
+  sem_sessao: 'Entre para continuar.',
 };
 
 export default async function PaginaLogin({

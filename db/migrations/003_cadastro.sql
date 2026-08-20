@@ -1,15 +1,6 @@
--- Migration 002 — Núcleo cadastral: usuario, instituicao, pessoa, vinculo
-
-create table usuario (
-  id          uuid primary key,
-  nome        text not null,
-  email       text not null unique,
-  papel       papel_usuario not null default 'leitura',
-  ativo       boolean not null default true,
-  created_at  timestamptz not null default now()
-);
-comment on table usuario is
-  'Usuários que administram o sistema. Participante de reunião NÃO é usuário — ele existe em pessoa.';
+-- =============================================================================
+-- 003 — Núcleo cadastral: tipo_instituicao, instituicao, pessoa, vinculo
+-- =============================================================================
 
 create table tipo_instituicao (
   id        smallserial primary key,
@@ -58,7 +49,9 @@ create table instituicao_status_historico (
 );
 create index inst_hist_idx on instituicao_status_historico (instituicao_id, alterado_em desc);
 
--- DECISÃO CENTRAL: "representante" não é entidade, é o vínculo entre pessoa e instituição.
+-- DECISÃO CENTRAL: "representante" não é entidade, é o vínculo entre pessoa e
+-- instituição. A pessoa existe sozinha e pode trocar de instituição sem que o
+-- histórico anterior se perca.
 create table pessoa (
   id           uuid primary key default gen_random_uuid(),
   nome         text not null,
@@ -93,5 +86,5 @@ create index vinculo_instituicao_idx on vinculo (instituicao_id) where status = 
 create index vinculo_pessoa_idx      on vinculo (pessoa_id);
 
 comment on table vinculo is
-  'Relação pessoa <-> instituição com período. Encerrar o vínculo NUNCA apaga a linha: '
+  'Relação pessoa <-> instituição com período. Encerrar NUNCA apaga a linha: '
   'apenas marca status=encerrado e preenche data_fim.';

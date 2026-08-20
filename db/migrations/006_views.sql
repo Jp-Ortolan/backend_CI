@@ -1,9 +1,10 @@
--- Migration 005 — Views de consolidação (RF41 a RF48)
+-- =============================================================================
+-- 006 — Views de consolidação (RF41 a RF48)
 -- Nenhum indicador é gravado em coluna: todos derivam dos registros de presença.
+-- =============================================================================
 
--- Quais reuniões CADA VÍNCULO deveria ter participado.
--- Só conta reunião ocorrida dentro do período de vigência do vínculo (RF44) —
--- sem isso, quem entrou em 2025 apareceria com 0% nas reuniões de 2019.
+-- Quais reuniões CADA VÍNCULO deveria ter participado. Só conta reunião ocorrida
+-- dentro do período de vigência do vínculo (RF44).
 create view vw_reuniao_esperada as
 select v.id as vinculo_id, v.pessoa_id, v.instituicao_id,
        r.id as reuniao_id, r.data as reuniao_data

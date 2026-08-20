@@ -1,14 +1,15 @@
 name: Banco de dados
 
 # Aplica as migrations num Postgres limpo e roda os testes de regra de negócio.
-# Qualquer PR que quebre uma constraint ou mude o cálculo de um indicador falha aqui.
+# Qualquer PR que quebre uma constraint, uma política de acesso ou o cálculo de
+# um indicador falha aqui, antes da revisão.
 
 on:
   push:
     branches: [main, develop]
-    paths: ['supabase/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
+    paths: ['db/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
   pull_request:
-    paths: ['supabase/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
+    paths: ['db/**', 'tests/**', 'scripts/**', '.github/workflows/banco.yml']
 
 jobs:
   migrations-e-testes:
@@ -44,28 +45,60 @@ jobs:
           PGUSER: postgres
           PGPASSWORD: postgres
           BANCO: ecossistema_ci
-          STUB: '1'          # Postgres puro no runner: precisa do auth.uid() falso
         run: ./scripts/testar-banco.sh
 
-  ordem-das-migrations:
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: npm }
+      - run: npm ci
+      - name: Testes de integração da autenticação
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecossistema_ci
+        run: npm run test:integracao
+
+  migracoes-idempotentes:
+    name: Migrations rodam duas vezes sem quebrar
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_PASSWORD: postgres, POSTGRES_USER: postgres, POSTGRES_DB: ecossistema }
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 10s
+          --health-timeout 5s --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Aplicar e reaplicar
+        env:
+          DATABASE_URL_ADMIN: postgresql://postgres:postgres@localhost:5432/ecossistema
+        run: |
+          ./scripts/migrar.sh
+          echo "--- segunda passada: nada deve ser aplicado ---"
+          saida=$(./scripts/migrar.sh)
+          echo "$saida"
+          if ! echo "$saida" | grep -q "0 migration(s) aplicada"; then
+            echo "::error::a segunda execução aplicou migrations de novo"
+            exit 1
+          fi
+
+  nomes-das-migrations:
     name: Migrations em ordem e sem duplicata
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Conferir nomes e ordem
         run: |
-          cd supabase/migrations
-          # todo arquivo precisa começar com timestamp de 14 dígitos
+          cd db/migrations
           for f in *.sql; do
-            if ! echo "$f" | grep -qE '^[0-9]{14}_[a-z0-9_]+\.sql$'; then
-              echo "::error::nome fora do padrão: $f (use 20260820090000_descricao.sql)"
+            if ! echo "$f" | grep -qE '^[0-9]{3}_[a-z0-9_]+\.sql$'; then
+              echo "::error::nome fora do padrão: $f (use 011_descricao.sql)"
               exit 1
             fi
           done
-          # nenhum timestamp repetido
-          if ls *.sql | cut -c1-14 | sort | uniq -d | grep -q .; then
-            echo "::error::há migrations com o mesmo timestamp"
-            ls *.sql | cut -c1-14 | sort | uniq -d
+          if ls *.sql | cut -c1-3 | sort | uniq -d | grep -q .; then
+            echo "::error::há migrations com o mesmo número"
+            ls *.sql | cut -c1-3 | sort | uniq -d
             exit 1
           fi
           echo "migrations OK: $(ls *.sql | wc -l) arquivo(s)"

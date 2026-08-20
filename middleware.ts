@@ -1,54 +1,39 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * Renova a sessão a cada requisição e barra o acesso ao painel sem login.
+ * Barreira rápida: quem não tem cookie de sessão nem chega a carregar o painel.
  *
- * O check-in público (/checkin e /api/checkin) fica de fora de propósito:
- * exigir cadastro do participante mataria a proposta do QR Code.
+ * O middleware roda no Edge, onde não há conexão com o PostgreSQL — então aqui
+ * só se verifica a PRESENÇA do cookie, nunca a validade. A checagem real (token
+ * existe, não expirou, usuário está ativo) acontece em exigirUsuario(), no
+ * servidor. Um cookie forjado passa por aqui e morre lá.
+ *
+ * O check-in público fica de fora de propósito: exigir login do participante
+ * mataria a proposta do QR Code.
  */
-export async function middleware(req: NextRequest) {
-  let resposta = NextResponse.next({ request: req });
+const ROTAS_PUBLICAS = [
+  '/checkin',
+  '/api/checkin',
+  '/login',
+  '/recuperar-senha',
+  '/redefinir-senha',
+  '/sem-permissao',
+];
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return req.cookies.getAll();
-        },
-        setAll(lista: { name: string; value: string; options: CookieOptions }[]) {
-          lista.forEach(({ name, value }) => req.cookies.set(name, value));
-          resposta = NextResponse.next({ request: req });
-          lista.forEach(({ name, value, options }) =>
-            resposta.cookies.set(name, value, options));
-        },
-      },
-    },
-  );
-
-  const { data } = await supabase.auth.getUser();
+export function middleware(req: NextRequest) {
   const caminho = req.nextUrl.pathname;
-
-  const ROTAS_PUBLICAS = [
-    '/checkin',           // página do participante — não pode exigir login
-    '/api/checkin',
-    '/login',
-    '/recuperar-senha',
-    '/redefinir-senha',
-    '/auth/callback',     // troca o código do e-mail por sessão
-  ];
   const publico = caminho === '/' || ROTAS_PUBLICAS.some(r => caminho.startsWith(r));
+  if (publico) return NextResponse.next();
 
-  if (!data.user && !publico) {
+  if (!req.cookies.get('sessao')) {
     const url = req.nextUrl.clone();
     url.pathname = '/login';
     url.searchParams.set('redirecionar', caminho);
+    url.searchParams.set('erro', 'sem_sessao');
     return NextResponse.redirect(url);
   }
 
-  return resposta;
+  return NextResponse.next();
 }
 
 export const config = {

@@ -1,4 +1,6 @@
--- Migration 007 — Carga inicial (dados de domínio, não de teste)
+-- =============================================================================
+-- 010 — Carga inicial (dados de domínio, não de teste)
+-- =============================================================================
 
 insert into tipo_instituicao (nome) values
   ('Universidade'),

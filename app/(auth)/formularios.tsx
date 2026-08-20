@@ -56,10 +56,11 @@ export function FormRecuperar() {
   );
 }
 
-export function FormRedefinir() {
+export function FormRedefinir({ token }: { token: string }) {
   const [estado, acao] = useFormState(redefinirSenha, INICIAL);
   return (
     <form action={acao} className="form">
+      <input type="hidden" name="token" value={token} />
       <label className="campo">
         <span>Nova senha</span>
         <input name="senha" type="password" autoComplete="new-password" required minLength={8} />
@@ -70,6 +71,7 @@ export function FormRedefinir() {
       </label>
       <Mensagem estado={estado} />
       <Botao>Salvar nova senha</Botao>
+      {estado.sucesso && <a className="link" href="/login">Ir para o login</a>}
     </form>
   );
 }

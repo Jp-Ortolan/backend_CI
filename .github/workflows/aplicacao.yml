@@ -45,29 +45,26 @@ jobs:
 
       - if: steps.existe.outputs.sim == 'true'
         env:
-          # Valores de fachada: o build não conecta no Supabase, só precisa que
-          # as variáveis existam para não quebrar na coleta de rotas.
-          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: build
-          SUPABASE_SERVICE_ROLE_KEY: build
+          # Valor de fachada: o build não conecta no banco, só precisa que a
+          # variável exista para não quebrar na coleta de rotas.
+          DATABASE_URL: postgresql://app_web:build@localhost:5432/build
         run: npm run build --if-present
 
-  chave-secreta-no-cliente:
-    name: Service role fora do código de cliente
+  banco-fora-do-cliente:
+    name: Acesso ao banco fora do código de cliente
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Procurar SUPABASE_SERVICE_ROLE_KEY em arquivo "use client"
+      - name: Procurar conexão de banco em arquivo "use client"
         run: |
           falhou=0
           while IFS= read -r arquivo; do
             if head -5 "$arquivo" | grep -q "use client"; then
-              if grep -q "SUPABASE_SERVICE_ROLE_KEY\|supabase/admin" "$arquivo"; then
-                echo "::error file=$arquivo::service role referenciada em componente de cliente"
+              if grep -qE "DATABASE_URL|lib/db/|@/lib/auth/senha" "$arquivo"; then
+                echo "::error file=$arquivo::acesso ao banco referenciado em componente de cliente"
                 falhou=1
               fi
             fi
           done < <(find . -path ./node_modules -prune -o \( -name '*.ts' -o -name '*.tsx' \) -print)
           if [ "$falhou" = "1" ]; then exit 1; fi
-          echo "nenhuma referência à service role em código de cliente"
-
+          echo "nenhuma referência ao banco em código de navegador"

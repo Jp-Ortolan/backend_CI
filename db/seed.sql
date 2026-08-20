@@ -9,9 +9,12 @@
 -- =============================================================================
 
 -- ------------------------------------------------------------------ usuários
-insert into usuario (id, nome, email, papel) values
-  ('11111111-1111-1111-1111-111111111111', 'Ana Gestora',  'ana@centroinovacao.br',  'admin'),
-  ('11111111-1111-1111-1111-111111111112', 'Bruno Leitura','bruno@centroinovacao.br', 'leitura');
+-- A senha de todos os usuários de exemplo é: senha123456
+-- (hash Argon2id — o banco nunca vê a senha em texto puro)
+insert into usuario (id, nome, email, papel, senha_hash) values
+  ('11111111-1111-1111-1111-111111111111', 'Ana Gestora',   'ana@centroinovacao.br',   'admin',   '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw'),
+  ('11111111-1111-1111-1111-111111111112', 'Bruno Leitura', 'bruno@centroinovacao.br', 'leitura', '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw'),
+  ('11111111-1111-1111-1111-111111111113', 'Carla Gestora', 'carla@centroinovacao.br', 'gestor',  '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw');
 
 -- -------------------------------------------------------------- instituições
 insert into instituicao (id, nome, cnpj, tipo_instituicao_id, cidade, uf, status, data_entrada, updated_by) values

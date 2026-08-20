@@ -1,4 +1,6 @@
--- Migration 003 — Operação: reuniao, presenca, documento
+-- =============================================================================
+-- 004 — Operação: reuniao, presenca, documento
+-- =============================================================================
 
 create table reuniao (
   id                uuid primary key default gen_random_uuid(),
@@ -26,8 +28,8 @@ create table reuniao (
 create index reuniao_data_idx   on reuniao (data desc);
 create index reuniao_status_idx on reuniao (status);
 
--- presenca guarda SNAPSHOT do vínculo no momento do check-in.
--- Sem isso, trocar de instituição reescreveria o histórico das reuniões passadas.
+-- presenca guarda SNAPSHOT do vínculo no momento do check-in. Sem isso, trocar
+-- de instituição reescreveria o histórico das reuniões passadas.
 create table presenca (
   id                    uuid primary key default gen_random_uuid(),
   reuniao_id            uuid not null references reuniao(id) on delete cascade,

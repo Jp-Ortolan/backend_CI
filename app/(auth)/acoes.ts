@@ -1,13 +1,24 @@
 'use server';
 
+import { headers } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { criarClienteServidor } from '@/lib/supabase/servidor';
+import { consulta, consultaUm } from '@/lib/db/consulta';
+import { abrirSessao, encerrarSessao } from '@/lib/auth/sessao';
+import { conferir, gerarHash, SENHA_MINIMA } from '@/lib/auth/senha';
+import { DURACAO_RECUPERACAO_MINUTOS, gerarToken, hashToken } from '@/lib/auth/tokens';
+import { enviar } from '@/lib/email/enviar';
+import type { PapelUsuario } from '@/lib/tipos-banco';
 
 export interface EstadoForm {
   erro?: string;
   sucesso?: string;
+}
+
+interface Credenciais {
+  id: string; nome: string; email: string;
+  senha_hash: string | null; papel: PapelUsuario; ativo: boolean;
 }
 
 const esquemaLogin = z.object({
@@ -19,8 +30,8 @@ const esquemaLogin = z.object({
 /**
  * RF01 — entrar.
  *
- * A mensagem de erro é sempre a mesma para e-mail inexistente e senha errada.
- * Diferenciar as duas entrega a um curioso a lista de quem tem conta no sistema.
+ * A mensagem é sempre a mesma para e-mail inexistente, senha errada e conta
+ * desativada. Diferenciar entregaria a quem tentar a lista de quem tem conta.
  */
 export async function entrar(_estado: EstadoForm, dados: FormData): Promise<EstadoForm> {
   const analise = esquemaLogin.safeParse({
@@ -32,24 +43,22 @@ export async function entrar(_estado: EstadoForm, dados: FormData): Promise<Esta
     return { erro: analise.error.issues[0]?.message ?? 'Dados inválidos.' };
   }
 
-  const supabase = criarClienteServidor();
-  const { error } = await supabase.auth.signInWithPassword({
-    email: analise.data.email,
-    password: analise.data.senha,
-  });
+  const u = await consultaUm<Credenciais>(
+    'select id, nome, email, senha_hash, papel, ativo from auth_credenciais($1)',
+    [analise.data.email],
+  );
 
-  if (error) return { erro: 'E-mail ou senha incorretos.' };
-
-  // Conta desativada pela coordenação: existe no Auth, mas não deve entrar.
-  const { data: auth } = await supabase.auth.getUser();
-  if (auth.user) {
-    const { data: u } = await supabase
-      .from('usuario').select('ativo').eq('id', auth.user.id).maybeSingle();
-    if (u && u.ativo === false) {
-      await supabase.auth.signOut();
-      return { erro: 'Este acesso está desativado. Fale com a coordenação.' };
-    }
+  const senhaConfere = await conferir(analise.data.senha, u?.senha_hash ?? null);
+  if (!u || !u.ativo || !senhaConfere) {
+    return { erro: 'E-mail ou senha incorretos.' };
   }
+
+  const cabecalhos = headers();
+  await abrirSessao(
+    u.id,
+    cabecalhos.get('x-forwarded-for'),
+    cabecalhos.get('user-agent'),
+  );
 
   revalidatePath('/', 'layout');
   redirect(analise.data.redirecionar || '/dashboard');
@@ -60,8 +69,8 @@ const esquemaEmail = z.object({ email: z.string().trim().email('Informe um e-mai
 /**
  * RF02 — pedir recuperação de senha.
  *
- * Responde sempre a mesma coisa, exista ou não a conta: caso contrário o
- * formulário vira um verificador de e-mails cadastrados.
+ * Responde sempre a mesma coisa, exista ou não a conta, para o formulário não
+ * virar um verificador de e-mails cadastrados.
  */
 export async function pedirRecuperacao(_estado: EstadoForm, dados: FormData): Promise<EstadoForm> {
   const analise = esquemaEmail.safeParse({ email: dados.get('email') });
@@ -69,10 +78,25 @@ export async function pedirRecuperacao(_estado: EstadoForm, dados: FormData): Pr
     return { erro: analise.error.issues[0]?.message ?? 'Dados inválidos.' };
   }
 
-  const supabase = criarClienteServidor();
+  const token = gerarToken();
+  const expira = new Date(Date.now() + DURACAO_RECUPERACAO_MINUTOS * 60_000);
+
+  await consulta('select auth_criar_token_recuperacao($1, $2, $3)', [
+    analise.data.email, hashToken(token), expira.toISOString(),
+  ]);
+
   const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
-  await supabase.auth.resetPasswordForEmail(analise.data.email, {
-    redirectTo: `${base}/auth/callback?proximo=/redefinir-senha`,
+  await enviar({
+    para: analise.data.email,
+    assunto: 'Redefinir sua senha — Ecossistema de Inovação',
+    texto: [
+      'Você pediu para redefinir sua senha no Sistema de Gestão do Ecossistema de Inovação.',
+      '',
+      `Abra este link para escolher uma nova senha (vale por ${DURACAO_RECUPERACAO_MINUTOS} minutos):`,
+      `${base}/redefinir-senha?token=${token}`,
+      '',
+      'Se não foi você que pediu, ignore este e-mail: nada muda até que o link seja usado.',
+    ].join('\n'),
   });
 
   return {
@@ -81,15 +105,17 @@ export async function pedirRecuperacao(_estado: EstadoForm, dados: FormData): Pr
 }
 
 const esquemaNovaSenha = z.object({
-  senha: z.string().min(8, 'A senha precisa ter ao menos 8 caracteres.'),
+  token: z.string().min(1, 'Link inválido.'),
+  senha: z.string().min(SENHA_MINIMA, `A senha precisa ter ao menos ${SENHA_MINIMA} caracteres.`),
   confirmacao: z.string(),
 }).refine(d => d.senha === d.confirmacao, {
   message: 'As duas senhas não conferem.', path: ['confirmacao'],
 });
 
-/** RF02 — gravar a nova senha (o usuário chega aqui pelo link do e-mail). */
+/** RF02 — gravar a nova senha. O token só vale uma vez. */
 export async function redefinirSenha(_estado: EstadoForm, dados: FormData): Promise<EstadoForm> {
   const analise = esquemaNovaSenha.safeParse({
+    token: dados.get('token'),
     senha: dados.get('senha'),
     confirmacao: dados.get('confirmacao'),
   });
@@ -97,23 +123,24 @@ export async function redefinirSenha(_estado: EstadoForm, dados: FormData): Prom
     return { erro: analise.error.issues[0]?.message ?? 'Dados inválidos.' };
   }
 
-  const supabase = criarClienteServidor();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) {
-    return { erro: 'O link expirou. Peça a recuperação de senha novamente.' };
+  const linha = await consultaUm<{ auth_usar_token_recuperacao: string | null }>(
+    'select auth_usar_token_recuperacao($1)', [hashToken(analise.data.token)],
+  );
+  const usuarioId = linha?.auth_usar_token_recuperacao ?? null;
+
+  if (!usuarioId) {
+    return { erro: 'Este link expirou ou já foi usado. Peça a recuperação de senha novamente.' };
   }
 
-  const { error } = await supabase.auth.updateUser({ password: analise.data.senha });
-  if (error) return { erro: 'Não foi possível alterar a senha. Tente novamente.' };
+  await consulta('select auth_definir_senha($1, $2)', [
+    usuarioId, await gerarHash(analise.data.senha),
+  ]);
 
-  revalidatePath('/', 'layout');
-  redirect('/dashboard');
+  return { sucesso: 'Senha alterada. Você já pode entrar com a nova senha.' };
 }
 
-/** Sair. */
 export async function sair(): Promise<void> {
-  const supabase = criarClienteServidor();
-  await supabase.auth.signOut();
+  await encerrarSessao();
   revalidatePath('/', 'layout');
   redirect('/login');
 }

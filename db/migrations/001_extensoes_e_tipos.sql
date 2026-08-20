@@ -1,12 +1,17 @@
--- Migration 001 — Extensões e tipos
--- Sistema de Gestão do Ecossistema de Inovação
+-- =============================================================================
+-- 001 — Extensões e tipos
+-- Sistema de Gestão do Ecossistema de Inovação · PostgreSQL 15+ (Railway)
+--
+-- Este conjunto de migrations roda em QUALQUER PostgreSQL. Não depende de
+-- extensão proprietária nem de schema de plataforma — o banco local, o de
+-- homologação e o de produção são o mesmo produto.
+-- =============================================================================
 
 create extension if not exists pgcrypto;   -- gen_random_uuid(), gen_random_bytes()
 create extension if not exists unaccent;   -- busca ignorando acento
 create extension if not exists pg_trgm;    -- busca aproximada por nome (check-in)
 
 -- unaccent() não é IMMUTABLE e por isso não pode ir direto numa coluna gerada.
--- Este wrapper fixa o dicionário e torna a função indexável.
 create or replace function imutavel_unaccent(text)
   returns text language sql immutable strict parallel safe
 as $$ select unaccent('unaccent', $1) $$;
