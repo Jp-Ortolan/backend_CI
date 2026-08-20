@@ -27,7 +27,7 @@ PSQL=(psql "$URL" -v ON_ERROR_STOP=1 -q)
 );"
 
 aplicadas=0
-for f in "$RAIZ"/db/migrations/*.sql; do
+for f in "$RAIZ"/banco/migrations/*.sql; do
   nome="$(basename "$f")"
   ja=$("${PSQL[@]}" -tAc "select count(*) from migration_aplicada where arquivo = '$nome'")
   if [ "$ja" != "0" ]; then
