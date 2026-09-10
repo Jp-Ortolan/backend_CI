@@ -1,6 +1,6 @@
 # Plano de testes — trilha QA
 
-Sistema de Gestão do Ecossistema de Inovação · versão 1.0
+Sistema de Gestão do Ecossistema de Inovação · versão 2.0 — 10/09/2026
 
 ## Objetivo
 
@@ -22,12 +22,34 @@ atualização cadastral — não integram o MVP.
 
 | Nível | O que cobre | Quem executa | Quando |
 |---|---|---|---|
-| Banco | Constraints, triggers e cálculo das views | Automatizado (`testes/banco/*.sql`) | Todo push e PR |
+| Banco | Constraints, triggers e cálculo das views | Automatizado — `testes/banco/*.sql` | Todo push e PR |
+| Domínio | Regras puras: CNPJ, permissões, tipos de arquivo | Automatizado — `npm run test:dominio` | Todo push e PR |
+| Aplicação | Casos de uso contra Postgres real, com RLS valendo | Automatizado — `npm run test:integracao` | Antes de cada merge |
 | Funcional | Casos de teste manuais sobre a interface | QA | Ao fim de cada semana |
 | Integração | Fluxo completo front + back em homologação | QA | Semana 6 |
 | Segurança | Permissão por perfil, RLS, exposição de dados | QA + Back-end | Semana 6 |
-| Carga | Check-in simultâneo (RNF09) | QA + DevOps | Semana 4 e Semana 6 |
-| Usabilidade | Check-in em celular real com pessoas de fora | QA + UX | Semana 4 e Semana 6 |
+| Usabilidade | Check-in em celular real — `05-roteiro-qr-celular.md` | QA + UX | Antes da primeira reunião real |
+
+### O que já está automatizado (10/09/2026)
+
+| Bateria | Testes | Comando |
+|---|---|---|
+| Banco | 80 | `./scripts/testar-banco.sh` |
+| Domínio | 21 | `npm run test:dominio` |
+| Aplicação | 74 | `npm run test:integracao` |
+
+Os de aplicação conectam como **`app_web`**, que não é dono das tabelas. Isso é
+o que faz os casos de permissão provarem alguma coisa: rodando como dono, o
+PostgreSQL ignora o RLS e todo teste de permissão passaria sem testar nada.
+
+Exigem `DATABASE_URL` (app_web) **e** `DATABASE_URL_ADMIN` (dono). Sem as duas
+o arquivo é pulado em vez de falhar, para quem ainda não subiu banco conseguir
+rodar o resto.
+
+**O nível de Carga saiu do plano** no replanejamento de 07/09
+(`docs/08-replanejamento-setembro.md`). O teste manual com 3 a 5 celulares
+simultâneos, na Parte 4 do roteiro de QR, cobre o risco que interessa a esta
+entrega.
 
 ### Sobre o nível de banco
 
