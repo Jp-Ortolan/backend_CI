@@ -4,7 +4,6 @@ Plataforma web para centralizar a base do ecossistema do Centro de Inovação �
 instituições, representantes, vínculos, reuniões e presenças — e automatizar o
 registro de participação por QR Code.
 
-**Entrega da primeira versão: 30/09/2026.**
 
 ---
 
@@ -32,14 +31,6 @@ npm run dev                   # http://localhost:3000
 ```
 
 O seed já traz três acessos prontos, todos com a senha **`senha123456`**:
-
-| E-mail | Perfil |
-|---|---|
-| `ana@centroinovacao.br` | Administrador |
-| `carla@centroinovacao.br` | Gestor |
-| `bruno@centroinovacao.br` | Consulta |
-
-Entre com cada um para ver o menu mudar — é a matriz de permissões funcionando.
 
 ---
 
@@ -112,7 +103,6 @@ não ficar no repositório. Detalhes em [docs/03-ambientes.md](docs/03-ambientes
 O projeto segue **arquitetura em camadas**: apresentação → aplicação → domínio,
 com a infraestrutura de lado. `src/dominio/` não importa nada de ninguém.
 O detalhe arquivo por arquivo está em
-[docs/06-mapa-do-projeto.md](docs/06-mapa-do-projeto.md).
 
 ---
 
@@ -131,47 +121,7 @@ O detalhe arquivo por arquivo está em
 
 ---
 
-## As quatro regras do modelo
-
-Valem para qualquer código que toque o banco:
-
-1. **Representante é vínculo, não pessoa.** A pessoa existe sozinha; o que a liga
-   a uma instituição é a tabela `vinculo`, com período. Encerrar vínculo nunca
-   apaga linha.
-2. **Presença é snapshot.** No check-in, grava-se `vinculo_id`, `instituicao_id`
-   e `cargo_no_momento`. Nunca deduza a instituição de uma presença antiga pelo
-   vínculo atual.
-3. **Indicador não se armazena.** Percentual e totais saem das views `vw_*`.
-4. **Convidado não tem vínculo.** O banco recusa — a aplicação não deve tentar.
-
-A regra 2 é a menos óbvia e a mais cara de corrigir depois: sem ela, cada troca
-de instituição reescreve o histórico das reuniões passadas.
-
----
-
-## Mexer no banco
-
-Crie o próximo arquivo numerado em `banco/migrations/` (hoje existe a `001`;
-a próxima é a `002_descricao.sql`) e rode:
-
-```bash
-./scripts/migrar.sh      # aplica só o que falta
-./scripts/testar-banco.sh
-```
-
-**Nunca edite uma migration já aplicada em outro ambiente.** O script guarda numa
-tabela quais arquivos já rodaram; editar um deles deixa o banco de cada pessoa em
-um estado diferente, e a diferença só aparece em produção.
-
----
-
 ## Stack
 
-Next.js 14 (App Router) · PostgreSQL no Railway · `pg` · Argon2id · GitHub Actions
+Next.js 14 (App Router) · PostgreSQL no Railway · `pg` · GitHub Actions
 
-## Equipe
-
-UX/UI (1) · Front-end (1) · Back-end (2) · DevOps (1) · QA (1)
-
-Reuniões semanais às quintas. Cada ciclo de sete dias fecha com algo
-demonstrável, não com relatório de andamento.
