@@ -236,6 +236,37 @@ async function principal() {
     }
   }
 
+  // ------------------------------------------------------------------------
+  // Deixa o banco pronto para os testes de integração, que conectam como
+  // app_web (não-dono) para o RLS valer de verdade. O papel nasce sem senha e
+  // sem LOGIN de propósito — em produção quem define isso é o DevOps, com um
+  // comando único, para a senha não ficar no repositório.
+  //
+  // Aqui é seguro fazer automaticamente porque `alter role` vale para o
+  // cluster inteiro, e este script só roda contra banco local descartável.
+  // Fora de localhost, ele não mexe: imprime o comando e sai do caminho.
+  // ------------------------------------------------------------------------
+  const local = /localhost|127\.0\.0\.1/.test(URL_ADMIN);
+  const senhaApp = process.env.SENHA_APP_WEB ?? 'app_web';
+
+  if (local) {
+    await conectando(url, (c) =>
+      c.query(`alter role app_web login password '${senhaApp}'`));
+  }
+
+  const urlApp = comBanco(URL_ADMIN, BANCO)
+    .replace(/\/\/[^@]*@/, `//app_web:${senhaApp}@`);
+
+  console.log('');
+  console.log(cinza('Para rodar os testes de integração neste banco:'));
+  if (!local) {
+    console.log(cinza(`  alter role app_web login password '<senha>';   (falta rodar)`));
+  }
+  console.log(cinza('  PowerShell:'));
+  console.log(cinza(`    $env:DATABASE_URL = "${urlApp}"`));
+  console.log(cinza(`    $env:DATABASE_URL_ADMIN = "${comBanco(URL_ADMIN, BANCO)}"`));
+  console.log(cinza('    npm run test:integracao'));
+
   console.log('');
   if (falhou) {
     console.log(vermelho(`==> ALGUM TESTE FALHOU (${totalOk} passaram antes disso)`));
