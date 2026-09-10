@@ -14,6 +14,9 @@ import { NextResponse } from 'next/server';
 const ROTAS_PUBLICAS = [
   '/checkin',
   '/api/checkin',
+  // Verificador de saúde não faz login. Responder 401 para ele faria o monitor
+  // acusar queda com o sistema no ar. A rota não devolve dado do ecossistema.
+  '/api/saude',
   '/login',
   '/recuperar-senha',
   '/redefinir-senha',
