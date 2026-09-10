@@ -6,8 +6,8 @@
  * em 100%.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
-import { pode } from '@/dominio/permissoes.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
+import { exigir } from '@/aplicacao/guarda.js';
 
 /**
  * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao|null} usuario
@@ -15,18 +15,21 @@ import { ErroDeNegocio } from '@/dominio/erros.js';
  * @returns {Promise<object>}
  */
 export async function encerrarReuniao(usuario, reuniaoId) {
-  if (!usuario) throw new ErroDeNegocio('NAO_AUTENTICADO', 'É preciso estar autenticado.');
-  if (!pode(usuario.papel, 'reuniao', 'encerrar')) {
-    throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite encerrar reuniões.');
-  }
+  const u = exigir(usuario, 'reuniao', 'encerrar');
 
-  return comUsuario(usuario.id, async (tx) => {
+  return comUsuario(u.id, async (tx) => {
     const r = await tx.consultaUm(
       'select id, data, status from reuniao where id = $1', [reuniaoId],
     );
     if (!r) throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
     if (r.status === 'cancelada') {
       throw new ErroDeNegocio('REUNIAO_CANCELADA', 'Esta reunião foi cancelada.');
+    }
+    // Encerrar duas vezes não duplicaria ausência (o "not exists" abaixo
+    // protege), mas devolveria "0 ausentes marcados" e faria parecer que a
+    // primeira execução não tinha funcionado.
+    if (r.status === 'encerrada') {
+      throw new ErroDeNegocio('DADOS_INVALIDOS', 'Esta reunião já foi encerrada.');
     }
 
     // Quem tinha vínculo válido NA DATA da reunião era esperado ali e não
@@ -43,13 +46,22 @@ export async function encerrarReuniao(usuario, reuniaoId) {
             select 1 from presenca p
              where p.reuniao_id = $1 and p.pessoa_id = v.pessoa_id)
        returning id`,
-      [r.id, usuario.id, r.data],
+      [r.id, u.id, r.data],
     );
 
-    await tx.consulta(`update reuniao set status = 'encerrada' where id = $1`, [r.id]);
+    const atualizada = await tx.consultaUm(
+      `update reuniao set status = 'encerrada' where id = $1 returning id`, [r.id],
+    );
+    // Sem política de UPDATE o PostgreSQL não levanta erro: não enxerga a linha
+    // e afeta zero registros. Sem esta checagem, o encerramento "daria certo"
+    // com a reunião ainda aberta e as ausências já lançadas.
+    if (!atualizada) {
+      throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite encerrar reuniões.');
+    }
 
     const resumo = await tx.consultaUm(
-      `select presentes, ausentes, convidados, percentual_presenca
+      `select presentes, ausentes, convidados, esperados,
+              percentual_presenca, percentual_comparecimento
          from vw_resumo_reuniao where reuniao_id = $1`, [r.id],
     );
 
@@ -58,6 +70,12 @@ export async function encerrarReuniao(usuario, reuniaoId) {
       presentes: Number(resumo?.presentes ?? 0),
       ausentesMarcados: ausentes.length,
       convidados: Number(resumo?.convidados ?? 0),
+      esperados: Number(resumo?.esperados ?? 0),
+      // O indicador que vale, corrigido na migration 002: representantes
+      // presentes ÷ vínculos vigentes na data, sem o convidado avulso.
+      percentualComparecimento: resumo?.percentual_comparecimento ?? null,
+      // Mantido porque o contrato de API já publicava este campo; é a conta
+      // antiga, sobre o total de registros.
       percentualPresenca: resumo?.percentual_presenca ?? null,
     };
   });
