@@ -11,7 +11,8 @@
     "lint": "next lint",
     "db:migrar": "./scripts/migrar.sh",
     "db:resetar": "./scripts/resetar.sh",
-    "db:testar": "./scripts/testar-banco.sh",
+    "db:testar": "node scripts/testar-banco.mjs",
+    "db:testar:bash": "./scripts/testar-banco.sh",
     "test": "npm run test:dominio && npm run test:integracao",
     "test:dominio": "node --import ./testes/registrar-alias.mjs --test \"testes/dominio/*.test.js\"",
     "test:integracao": "node --import ./testes/registrar-alias.mjs --test \"testes/integracao/*.test.js\""
