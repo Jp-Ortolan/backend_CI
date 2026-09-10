@@ -1,0 +1,39 @@
+# Sobe só o PostgreSQL. A aplicação continua rodando com `npm run dev`.
+#
+# POR QUE SÓ O BANCO
+# O que atrapalha quem entra no projeto é instalar e configurar o Postgres —
+# a aplicação em si é `npm install && npm run dev`. Empacotar o Next em imagem
+# resolveria um problema que ninguém tem aqui, e cobraria um rebuild a cada
+# alteração de código. Quando for para produção, o Railway constrói a imagem.
+#
+#   docker compose up -d      sobe
+#   docker compose down       para (os dados ficam)
+#   docker compose down -v    para e apaga os dados
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: eco-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ecossistema
+      # Ordenação e comparação de texto em pt-BR: sem isto, "Á" vem depois de
+      # "Z" na listagem de instituições.
+      LANG: pt_BR.utf8
+      POSTGRES_INITDB_ARGS: "--locale=C.UTF-8 --encoding=UTF8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - dados-postgres:/var/lib/postgresql/data
+    healthcheck:
+      # Sem isto, `docker compose up -d` volta antes de o banco aceitar conexão
+      # e o primeiro `npm run db:testar` falha por "connection refused".
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecossistema"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  dados-postgres:
