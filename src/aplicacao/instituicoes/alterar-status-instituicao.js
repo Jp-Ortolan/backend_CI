@@ -1,12 +1,9 @@
 /**
  * CASO DE USO — Ativar / desativar instituição (RF09, RF10).
  *
- * É o botão "Desativar instituição" da tela de detalhe, e o caminho CERTO
- * quando alguém tenta excluir uma instituição que já tem histórico.
- *
- * A troca de status não precisa gravar histórico à mão: a trigger
- * instituicao_status_hist (migration 001) cria a linha em
- * instituicao_status_historico sozinha, com autor e data.
+ * É o caminho certo quando alguém tenta excluir uma instituição que já tem
+ * histórico. A trigger instituicao_status_hist (migration 001) grava o histórico
+ * sozinha, com autor e data.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';

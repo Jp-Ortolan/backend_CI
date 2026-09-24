@@ -1,30 +1,15 @@
 /**
- * Regras de arquivo — o que o sistema aceita receber.
- *
- * Três perguntas diferentes, e todas precisam de resposta antes de gravar:
- *   1. o tipo é permitido?
- *   2. o conteúdo é mesmo daquele tipo, ou só o nome diz que é?
- *   3. o nome é seguro para virar caminho de armazenamento?
- *
- * A terceira é a que costuma faltar. Nome de arquivo vem do computador de quem
- * envia, então pode conter `../`, barra, byte nulo ou 300 caracteres — e vira
- * caminho no armazenamento.
+ * Regras de arquivo: o que o sistema aceita receber.
+ * Confere tipo permitido, conteúdo x tipo declarado e nome seguro.
  */
 
 /** 20 MB. Cabe relatório digitalizado; não cabe vídeo. */
 export const LIMITE_BYTES = Number(process.env.UPLOAD_LIMITE_BYTES ?? 20 * 1024 * 1024);
 
 /**
- * Tipos aceitos, com as assinaturas que provam o conteúdo.
- *
- * NÃO estão na lista, de propósito: `text/html`, `image/svg+xml` e qualquer
- * coisa executável. SVG carrega `<script>`, e HTML é HTML — servidos a partir
- * do mesmo domínio do sistema, viram execução de script na sessão de quem
- * abre. O download forçado já protege, mas um tipo que nunca entra é uma
- * proteção a menos para alguém desfazer sem perceber.
- *
- * `assinaturas` é uma lista de [posição, bytes em hex].
- * Lista vazia = formato sem assinatura (texto puro), conferido de outro jeito.
+ * Tipos aceitos e as assinaturas que provam o conteúdo.
+ * HTML e SVG ficam de fora de propósito: podem carregar script.
+ * `assinaturas` é uma lista de [posição, bytes em hex]; vazia = texto puro.
  *
  * @type {Record<string, { rotulo: string, extensoes: string[],
  *                         assinaturas: [number, string][] }>}
@@ -105,8 +90,7 @@ export function extensaoDe(nome) {
  */
 export function sanitizarNome(nome) {
   const so = String(nome ?? '')
-    // `..\\` e `../` viram nada: sem isso, um nome como "../../etc/senha"
-    // escaparia da pasta no dia em que o armazenamento for sistema de arquivos.
+// Barra vira sublinhado: impede nome do tipo ../../etc/senha.
     .replace(/[\\/]/g, '_')
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/\s+/g, '-')
@@ -120,13 +104,8 @@ export function sanitizarNome(nome) {
 
 /**
  * O conteúdo bate com o tipo declarado?
- *
- * O navegador manda o mime a partir da extensão, então ele é palpite, não
- * prova. Conferir os primeiros bytes pega tanto o engano honesto (planilha
- * salva com extensão errada) quanto o arquivo renomeado de propósito.
- *
- * Texto puro não tem assinatura: o critério é não conter byte nulo, que é o
- * que separa texto de binário na prática.
+ * O mime do navegador vem da extensão, então é palpite; os bytes é que provam.
+ * Texto puro não tem assinatura: o critério é não ter byte nulo.
  *
  * @param {Buffer|Uint8Array} conteudo
  * @param {string} mime
@@ -143,9 +122,8 @@ export function conteudoBateComTipo(conteudo, mime) {
     return !bytes.subarray(0, 8192).includes(0);
   }
 
-  // WebP precisa das DUAS assinaturas (RIFF e WEBP); os outros formatos têm
-  // variantes alternativas e basta uma bater. A diferença é essa: quando todas
-  // as assinaturas começam na posição 0, são alternativas.
+// Assinaturas todas na posição 0 são alternativas: basta uma bater.
+// WebP tem duas em posições diferentes, então precisa das duas.
   const todasNaPosicaoZero = tipo.assinaturas.every(([pos]) => pos === 0);
 
   const confere = ([pos, hex]) => {
@@ -159,10 +137,8 @@ export function conteudoBateComTipo(conteudo, mime) {
 }
 
 /**
- * Monta a chave lógica do arquivo no armazenamento.
- *
- * O uuid no meio evita que dois "relatorio.pdf" da mesma instituição colidam, e
- * evita que alguém adivinhe o caminho de um documento a partir do nome.
+ * Monta a chave do arquivo no armazenamento.
+ * O id no meio evita colisão de nomes iguais e impede adivinhar o caminho.
  *
  * @param {'instituicao'|'reuniao'} dono
  * @param {string} donoId

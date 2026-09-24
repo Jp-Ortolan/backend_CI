@@ -1,13 +1,9 @@
 /**
  * CASO DE USO — Listagem de instituições (RF11, RF12).
  *
- * Sustenta a tela "Instituições": barra de busca, três filtros, tabela paginada
- * e o rodapé "Mostrando 1 a 9 de 122 instituições".
- *
- * Busca e paginação acontecem NO SERVIDOR, não no navegador. São 122
- * instituições hoje e podem ser mil; mandar tudo para o front filtrar seria
- * rápido agora e insustentável depois — e exporia a base inteira a quem
- * abrisse o DevTools.
+ * Sustenta a tela Instituições: busca, três filtros, tabela paginada e rodapé.
+ * Busca e paginação são no servidor: mandar a base inteira para o front filtrar
+ * não escala e exporia tudo a quem abrisse o DevTools.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
@@ -57,14 +53,8 @@ export async function listarInstituicoes(usuario, filtros) {
   };
 
   if (f.busca) {
-    // O campo é um só e procura por nome OU CNPJ, então precisa decidir qual
-    // dos dois a pessoa digitou.
-    //
-    // A regra é a ausência de letra: um CNPJ só tem dígitos e a pontuação
-    // ./-. Qualquer letra significa nome — inclusive em nomes que carregam
-    // número, como "Colégio 31 de Março" ou "Unidade 2". Contar dígitos não
-    // serviria: esses nomes têm dígitos suficientes para serem confundidos com
-    // CNPJ, e a busca voltaria vazia sem explicar por quê.
+// O campo é um só e procura por nome OU CNPJ. A regra é a ausência de letra:
+// qualquer letra significa nome, inclusive em Colégio 31 de Março.
     const pareceCnpj = /^[\d.\-/\s]+$/.test(f.busca);
     const digitos = apenasDigitos(f.busca);
 

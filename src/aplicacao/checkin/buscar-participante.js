@@ -15,9 +15,8 @@ import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';
  */
 
 /**
- * A função do banco devolve no máximo 5 resultados e exige 3 caracteres:
- * mostrar nome e instituição de quem ainda não confirmou presença é uma
- * exposição pequena mas real, e os dois limites dificultam varrer a base.
+ * A função do banco devolve no máximo 5 resultados e exige 3 caracteres: os
+ * dois limites dificultam varrer a base pelos nomes.
  *
  * @param {string} token
  * @param {string} termo

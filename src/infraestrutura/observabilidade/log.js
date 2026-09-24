@@ -1,18 +1,8 @@
 /**
- * Log da aplicação.
+ * Log da aplicação: uma linha JSON por evento, no stdout.
  *
- * Uma linha JSON por evento, no stdout. É o formato que o Railway (e qualquer
- * plataforma) sabe indexar: com texto solto dá para ler, mas não dá para
- * perguntar "quantos 500 na rota de check-in ontem".
- *
- * O QUE NUNCA PODE ENTRAR NO LOG
- * Senha, hash de senha, token de sessão, token de recuperação e o qr_token da
- * reunião. Os três primeiros são credenciais; o qr_token é a chave que permite
- * registrar presença — no log ele fica legível para quem tiver acesso ao painel
- * da plataforma, que é gente demais para uma chave dessas.
- *
- * `limpar()` remove esses campos por nome antes de escrever, para o cuidado não
- * depender de quem chama lembrar.
+ * Senha, hash, token de sessão, token de recuperação e qr_token nunca entram —
+ * `limpar()` tira esses campos pelo nome antes de escrever.
  */
 
 /** Campos que nunca são escritos, não importa de onde venham. */
@@ -78,8 +68,7 @@ export const log = {
     escrever('erro', evento, {
       ...dados,
       mensagem: e?.message ?? String(erro),
-      // O código do PostgreSQL (23505, 23503...) é o que mais ajuda a
-      // diagnosticar sem precisar reproduzir.
+// O código do Postgres é o que mais ajuda a diagnosticar sem reproduzir.
       codigoBanco: e?.code,
       restricao: e?.constraint,
       pilha: process.env.NODE_ENV === 'production' ? undefined : e?.stack,

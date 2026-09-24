@@ -1,13 +1,6 @@
 /**
- * CNPJ — normalização e validação do dígito verificador.
- *
- * O banco só garante que são 14 dígitos (`instituicao_cnpj_digitos`). Isso
- * impede lixo evidente, mas aceita "11111111111111", que não é CNPJ nenhum.
- * A conferência do dígito verificador é regra de domínio e mora aqui.
- *
- * Guardamos sempre SÓ OS DÍGITOS. A pontuação é decoração de tela: gravar
- * "12.345.678/0001-95" faria "12345678000195" parecer um CNPJ diferente, e a
- * restrição de unicidade deixaria os dois entrarem.
+ * CNPJ: normaliza e valida o dígito verificador.
+ * Guardamos sempre só os dígitos — a pontuação é decoração de tela.
  */
 
 /**
@@ -30,8 +23,7 @@ export function cnpjValido(valor) {
   const cnpj = apenasDigitos(valor);
   if (cnpj.length !== 14) return false;
 
-  // Todos os dígitos iguais passam na conta dos verificadores por coincidência
-  // aritmética, então precisam ser recusados na mão.
+// Dígitos todos iguais passam na conta por coincidência: recusa na mão.
   if (/^(\d)\1{13}$/.test(cnpj)) return false;
 
   /**

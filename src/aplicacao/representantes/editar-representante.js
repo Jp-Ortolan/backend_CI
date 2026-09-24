@@ -13,17 +13,12 @@ import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
 
 /**
- * ATENÇÃO à ordem de .optional() e .transform().
+ * A ordem de .optional() e .transform() importa.
  *
- * `campo.optional().transform(v => v || null)` embrulha o opcional num efeito:
- * o transform roda MESMO quando a chave não foi enviada, devolve null, e a
- * chave aparece no resultado. Num PATCH de um campo só, os outros três
- * chegariam aqui como null e apagariam o que estava gravado — sem erro nenhum
- * para avisar.
- *
- * Com `.partial()` sobre o objeto base é o contrário: chave ausente é
- * descartada antes de qualquer transform, e só o que foi enviado chega ao
- * update. Enviar `email: ""` continua limpando o campo, que é intencional.
+ * `campo.optional().transform(v => v || null)` roda o transform mesmo com a
+ * chave ausente e devolve null: num PATCH de um campo só, os outros seriam
+ * apagados sem erro nenhum. `.partial()` sobre o objeto base descarta a chave
+ * ausente antes do transform. Enviar `email: ""` continua limpando o campo.
  */
 const objetoRepresentante = z.object({
   nome: z.string().trim().min(3, 'Informe o nome completo.').max(200),

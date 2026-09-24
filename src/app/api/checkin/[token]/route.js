@@ -1,11 +1,9 @@
 /**
  * APRESENTAÇÃO — check-in público.
  *
- * Esta camada só traduz web: lê a URL e o corpo, chama o caso de uso e
- * transforma o resultado (ou o erro) em resposta HTTP. Regra nenhuma mora aqui.
- *
- * A exceção é o limite por IP (RNF14): ele depende do IP, que é informação de
- * transporte e não chega ao caso de uso. Fica aqui, antes de qualquer trabalho.
+ * Só traduz web: lê a URL e o corpo, chama o caso de uso, devolve HTTP.
+ * A exceção é o limite por IP (RNF14), que depende de informação de transporte
+ * e por isso fica aqui, antes de qualquer trabalho.
  */
 import { consultarReuniao } from '@/aplicacao/checkin/consultar-reuniao.js';
 import { registrarPresenca } from '@/aplicacao/checkin/registrar-presenca.js';
@@ -37,9 +35,8 @@ export async function GET(req, { params }) {
  */
 export async function POST(req, { params }) {
   try {
-    // Antes de ler o corpo: uma enxurrada de requisições não deve nem chegar a
-    // consumir o corpo, e a contagem tem que valer para a tentativa recusada
-    // também — senão bastaria mandar corpo inválido para não ser contado.
+// Antes de ler o corpo: uma enxurrada não deve nem consumir o corpo, e a
+// tentativa recusada também precisa contar.
     await exigirDentroDoLimite('registrar', ipDaRequisicao(req), params.token);
 
     const corpo = await req.json().catch(() => null);

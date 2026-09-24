@@ -43,9 +43,7 @@ export async function ler(tx, { documentoId }) {
  * @returns {Promise<void>}
  */
 export async function remover(tx, { documentoId }) {
-  // Na prática o "on delete cascade" de documento_conteudo já apaga junto com o
-  // documento. Este método existe para o caso de o adaptador mudar: com S3, o
-  // banco não tem como apagar o objeto sozinho.
+// O cascade do banco já apaga junto. Existe para quando o adaptador não for o banco.
   await tx.consulta('delete from documento_conteudo where documento_id = $1', [documentoId]);
 }
 

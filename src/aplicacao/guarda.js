@@ -1,14 +1,8 @@
 /**
- * Porteiro dos casos de uso.
+ * Porteiro dos casos de uso: existe usuário? o papel dele permite esta ação?
  *
- * Todo caso de uso começa igual: existe usuário? o papel dele permite esta
- * ação? Repetir essas seis linhas em cada arquivo é o tipo de duplicação que
- * um dia sai errada num arquivo só — e ninguém percebe, porque o teste do
- * arquivo certo continua passando.
- *
- * Isto NÃO substitui o RLS. É a primeira porta, para devolver 401/403 com
- * mensagem útil; a segunda porta é o banco, que recusa de novo mesmo que esta
- * aqui fosse contornada.
+ * Não substitui o RLS. É a primeira porta, para devolver 401/403 com mensagem
+ * útil; a segunda porta é o banco, que recusa de novo.
  */
 import { pode } from '@/dominio/permissoes.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
@@ -35,10 +29,8 @@ export function exigir(usuario, recurso, acao) {
 
 /**
  * Valida a entrada com um esquema zod e devolve o erro no formato do contrato.
- *
- * Só a primeira mensagem vai para o `mensagem`, porque é ela que a tela mostra
- * em destaque; a lista completa vai em `campos`, para o front marcar cada campo
- * do formulário de uma vez em vez de o usuário descobrir um erro por tentativa.
+ * A primeira mensagem vai em `mensagem`, que é a que a tela destaca; a lista
+ * completa vai em `campos`, para o front marcar todos os campos de uma vez.
  *
  * @template T
  * @param {import('zod').ZodType<T>} esquema

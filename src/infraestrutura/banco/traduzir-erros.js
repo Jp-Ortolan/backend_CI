@@ -1,11 +1,8 @@
 import { ErroDeNegocio } from '@/dominio/erros.js';
 
 /**
- * As funções de check-in no banco sinalizam problema levantando exceção com
- * uma palavra-chave. Aqui essa palavra vira o código estável do contrato de API
- * e a mensagem em português que o participante lê.
- *
- * Ver docs/04-contrato-de-api.md
+ * As funções de check-in levantam exceção com uma palavra-chave; aqui ela vira o
+ * código do contrato e a mensagem em português. Ver docs/04-contrato-de-api.md
  *
  * @type {Record<string, [import('@/dominio/erros.js').CodigoErro, string]>}
  */
@@ -45,10 +42,8 @@ const MAPA = {
 };
 
 /**
- * Restrições de unicidade e de verificação, pelo NOME que têm no banco.
- *
- * Vale confiar no nome da constraint em vez de ler o texto da mensagem: o texto
- * muda com a versão e com o idioma do PostgreSQL, o nome não muda sem migration.
+ * Restrições de unicidade e verificação, pelo nome que têm no banco.
+ * O nome só muda com migration; o texto da mensagem muda com a versão do Postgres.
  *
  * @type {Record<string, [import('@/dominio/erros.js').CodigoErro, string]>}
  */
@@ -92,9 +87,8 @@ const RESTRICOES = {
 };
 
 /**
- * Traduz a exceção do banco. Se não for uma das conhecidas, repassa como está —
- * erro inesperado tem que continuar sendo inesperado, e não virar uma mensagem
- * amigável que esconde um defeito de verdade.
+ * Traduz a exceção do banco. O que não for conhecido passa direto, para erro
+ * inesperado não virar mensagem amigável que esconde defeito.
  *
  * @param {unknown} e
  * @returns {never}

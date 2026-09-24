@@ -1,9 +1,8 @@
 /**
  * CASO DE USO — Registrar a presença no check-in público (RF29 a RF34).
  *
- * O participante não tem conta. Quem garante que só se pode gravar presença
- * numa reunião aberta, com o vínculo válido NA DATA da reunião, é a função
- * checkin_registrar dentro do banco — não este arquivo.
+ * O participante não tem conta. Quem garante reunião aberta e vínculo válido NA
+ * DATA da reunião é a função checkin_registrar, dentro do banco.
  */
 import { z } from 'zod';
 import { consultaUm } from '@/infraestrutura/banco/consulta.js';

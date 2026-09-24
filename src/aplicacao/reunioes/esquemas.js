@@ -1,10 +1,8 @@
 /**
  * Esquemas de entrada das reuniões.
  *
- * A tela de cadastro de reunião ainda não veio do UX/UI. Os campos aqui saem do
- * que o banco já modela (migration 001 + `endereco` da 002) e do que o bloco
- * "Próximas reuniões" do dashboard exibe. Quando a tela chegar, o que faltar se
- * acrescenta — o que não se faz é inventar campo que ninguém pediu.
+ * A tela ainda não veio do UX/UI: os campos saem do que o banco já modela
+ * (migration 001 + `endereco` da 002) e do que o dashboard exibe.
  */
 import { z } from 'zod';
 
@@ -22,12 +20,9 @@ const instante = z.string().trim().min(10).optional().nullable()
 
 /**
  * O objeto base, sem os refines.
- *
- * Fica separado porque `.refine()` embrulha o esquema num ZodEffects, e
- * ZodEffects não tem `.partial()`. Derivar o esquema de edição de
- * `esquemaCriarReuniao.innerType()` só funciona enquanto houver exatamente um
- * refine — o segundo quebra na importação do módulo. Nomear a base evita a
- * armadilha.
+ * `.refine()` embrulha o esquema num ZodEffects, que não tem `.partial()`.
+ * Nomear a base evita depender de `innerType()`, que quebra ao entrar um
+ * segundo refine.
  */
 const objetoReuniao = z.object({
   titulo: z.string().trim().min(3, 'Informe o título da reunião.').max(200),
@@ -56,9 +51,8 @@ const objetoReuniao = z.object({
 });
 
 /**
- * As duas coerências de horário. Valem na criação e na edição — num PATCH que
- * manda só `horaFim`, o campo que falta é ignorado e a checagem passa; a
- * comparação contra o que já está gravado é feita no caso de uso.
+ * As duas coerências de horário, na criação e na edição. Num PATCH, o campo que
+ * falta é ignorado; a comparação com o que está gravado fica no caso de uso.
  *
  * @template {import('zod').ZodTypeAny} T
  * @param {T} esquema

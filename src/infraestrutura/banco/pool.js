@@ -3,40 +3,23 @@ import pg from 'pg';
 const { Pool } = pg;
 
 /**
- * Coluna `date` volta como TEXTO, não como Date do JavaScript.
- *
- * Por padrão o driver converte `date` (OID 1082) para Date, interpretando o
- * valor no fuso do servidor. Duas consequências ruins:
- *
- * 1. `JSON.stringify` transforma Date em timestamp UTC completo. A data de uma
- *    reunião ("2026-09-12") sai da API como "2026-09-12T03:00:00.000Z", e num
- *    servidor com fuso à frente de UTC vira o DIA ANTERIOR. O contrato diz que
- *    data é ISO 8601 — e para `date`, ISO 8601 é AAAA-MM-DD.
- *
- * 2. Comparação com string para de funcionar em silêncio. `'2026-08-31' <
- *    dataDoBanco` compara texto com número (o Date vira timestamp) e devolve
- *    sempre false: a checagem existe, roda e nunca acusa nada.
- *
- * Devolver o texto que o PostgreSQL já mandou resolve os dois. `timestamptz`
- * continua virando Date, que é o certo — ali o instante no tempo é o dado.
+ * Coluna `date` volta como texto, não como Date.
+ * Virando Date, o JSON.stringify manda timestamp UTC e a data da reunião pode
+ * cair um dia para trás; e comparação com string para de funcionar em silêncio.
  */
 pg.types.setTypeParser(1082, (valor) => valor);
 
 /**
- * Pool de conexões com o PostgreSQL.
- *
- * Em desenvolvimento o Next recarrega os módulos a cada alteração; sem guardar o
- * pool no globalThis, cada recarga abriria um pool novo e as conexões antigas
- * ficariam penduradas até estourar o limite do banco.
+ * Pool de conexões. Fica no globalThis porque o Next recarrega os módulos em
+ * desenvolvimento e cada recarga abriria um pool novo.
  *
  * @type {{ poolPg?: import('pg').Pool }}
  */
 const global_ = globalThis;
 
 /**
- * O Railway exige TLS e apresenta certificado próprio; Postgres local
- * normalmente nem tem TLS ligado. A regra: só não usa TLS quando é claramente
- * local — endereço de loopback, soquete unix, ou sslmode=disable explícito.
+ * Railway exige TLS; Postgres local normalmente não tem.
+ * Só dispensa TLS quando o endereço é claramente local.
  *
  * @param {string} url
  */
@@ -67,12 +50,8 @@ export function pool() {
 }
 
 /**
- * Encerra o pool e devolve as conexões.
- *
- * A aplicação web nunca chama isto: o pool tem que viver enquanto o processo
- * viver. Quem precisa é teste e script — sem encerrar, o processo fica de pé
- * até o idleTimeoutMillis expirar (30 segundos por conexão ociosa), e uma
- * suíte de quatro arquivos passa a levar dois minutos só esperando.
+ * Encerra o pool. Só teste e script precisam: sem isso o processo fica de pé
+ * esperando o timeout das conexões ociosas.
  *
  * @returns {Promise<void>}
  */

@@ -48,9 +48,8 @@ export async function criarInstituicao(usuario, entrada) {
       traduzirErroDoBanco(e);
     }
 
-    // Falta de política de INSERT levanta erro e cai no catch acima. Ainda
-    // assim, um returning vazio aqui significaria que algo saiu do previsto —
-    // e é melhor falhar alto do que devolver um id indefinido.
+// Um returning vazio significa que algo saiu do previsto: melhor falhar alto
+// do que devolver um id indefinido.
     if (!linha) {
       throw new ErroDeNegocio('SEM_PERMISSAO', 'Não foi possível cadastrar a instituição.');
     }

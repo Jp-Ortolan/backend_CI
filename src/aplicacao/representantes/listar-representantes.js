@@ -1,13 +1,10 @@
 /**
  * CASO DE USO — Listagem de representantes (RF14, RF17).
  *
- * "Representante" aqui é a PESSOA com os vínculos dela ao lado, e não uma linha
- * por vínculo. É a diferença que faz a tela mostrar "José da Silva — Startup
- * Beta (atual), Universidade Alfa (até 05/2025)" em vez de dois Josés soltos.
- *
- * A tela de representantes ainda não chegou do UX/UI. Os campos aqui saem do
- * que o modelo já garante e do que a aba "Representantes" do detalhe da
- * instituição mostra; quando a tela vier, o que faltar se acrescenta.
+ * Representante aqui é a PESSOA com os vínculos ao lado, não uma linha por
+ * vínculo: é o que mostra José da Silva — Startup Beta (atual), Universidade
+ * Alfa (até 05/2025) em vez de dois Josés soltos.
+ * A tela ainda não veio do UX/UI; os campos saem do que o modelo já garante.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';

@@ -5,10 +5,8 @@
  *   arquivo — os bytes vêm no multipart e ficam guardados no sistema
  *   link    — o documento mora no Drive e aqui fica só o endereço
  *
- * O link existe porque o Centro já tem material no Drive e obrigar a reenviar
- * tudo seria trabalho manual sem ganho. As duas formas geram a mesma linha de
- * documento; o que muda é `storage_path` (arquivo) ou `url_externa` (link), e o
- * banco garante que é sempre exatamente um dos dois.
+ * As duas geram a mesma linha de documento; muda `storage_path` (arquivo) ou
+ * `url_externa` (link), e o banco garante que é sempre um só dos dois.
  */
 import { z } from 'zod';
 import { createHash } from 'node:crypto';
@@ -124,9 +122,8 @@ export async function enviarDocumento(usuario, { campos, arquivo = null }) {
     // ---------------------------------------------------------- com arquivo
     const checksum = createHash('sha256').update(arquivo.conteudo).digest('hex');
 
-    // Mesmo arquivo, mesmo dono, já anexado: devolver o que existe é mais útil
-    // que criar uma segunda cópia idêntica que alguém vai ter que limpar
-    // depois. Clicar duas vezes em "enviar" é a causa mais comum disso.
+// Mesmo arquivo e mesmo dono: devolve o que existe em vez de criar uma segunda
+// cópia. Clicar duas vezes em enviar é a causa mais comum.
     const repetido = await tx.consultaUm(
       `select id, nome, created_at from documento
         where checksum_sha256 = $1

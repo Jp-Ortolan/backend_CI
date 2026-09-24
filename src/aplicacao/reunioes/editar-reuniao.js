@@ -32,9 +32,8 @@ export async function editarReuniao(usuario, id, entrada) {
     );
     if (!atual) throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
 
-    // Reunião encerrada já fechou o denominador dos indicadores: mudar a data
-    // agora recalcularia quem "era esperado" e reescreveria participação
-    // passada de gente que não tem nada a ver com a correção.
+// Reunião encerrada já fechou o denominador dos indicadores: mudar a data agora
+// reescreveria participação passada.
     if (atual.status === 'encerrada' && ('data' in colunas || 'hora_inicio' in colunas)) {
       throw new ErroDeNegocio('DADOS_INVALIDOS',
         'A reunião já foi encerrada. Data e horário não podem mais mudar, '

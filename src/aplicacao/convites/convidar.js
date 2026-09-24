@@ -5,9 +5,8 @@
  *   em massa    — todos os vínculos ativos de instituições ativas
  *   individual  — uma lista de vínculos escolhidos a dedo
  *
- * O convite é o que alimenta o "115 confirmados" do dashboard. Ele não é
- * presença: confirmar não registra comparecimento, e comparecer não exige
- * convite (ver docs/07-alinhamento-modelo-front.md).
+ * Convite não é presença: confirmar não registra comparecimento
+ * (ver docs/07-alinhamento-modelo-front.md).
  */
 import { z } from 'zod';
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
@@ -80,9 +79,8 @@ export async function convidar(usuario, reuniaoId, entrada) {
     return {
       reuniaoId: r.id,
       convidadosAgora: inseridos,
-      // Quando o front pede 10 e recebe convidadosAgora = 7, os 3 restantes já
-      // estavam convidados ou têm vínculo encerrado. Devolver os dois números
-      // deixa a tela dizer isso em vez de parecer que algo falhou.
+// Devolve os dois números: a diferença são vínculos já convidados ou
+// encerrados, e a tela diz isso em vez de parecer falha.
       convitesEnviados: Number(resumo?.convites_enviados ?? 0),
       confirmados: Number(resumo?.confirmados ?? 0),
     };

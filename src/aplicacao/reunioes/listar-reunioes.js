@@ -1,9 +1,9 @@
 /**
  * CASO DE USO — Listagem de reuniões (RF24).
  *
- * Cada linha já vem com os números que a tela mostra ao lado do título:
- * convidados, confirmados, presentes. Eles saem de vw_resumo_reuniao, não de
- * coluna gravada — contador guardado envelhece na primeira correção de presença.
+ * Cada linha já vem com convidados, confirmados e presentes, vindos de
+ * vw_resumo_reuniao e não de coluna gravada: contador guardado envelhece na
+ * primeira correção de presença.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
@@ -40,10 +40,9 @@ export async function listarReunioes(usuario, filtros) {
   if (f.periodo === 'passadas') condicoes.push('r.data < current_date');
 
   if (f.instituicaoId) {
-    // Reuniões em que a instituição foi convidada OU esteve presente. As duas
-    // pontas importam: só convite esconderia quem apareceu sem ser chamado, e
-    // só presença esconderia quem foi chamado e faltou.
-    // O mesmo id aparece duas vezes na condição e entra uma vez no array.
+// Convidada OU presente: só convite esconderia quem apareceu sem ser chamado,
+// só presença esconderia quem foi chamado e faltou. O mesmo id aparece duas
+// vezes na condição e entra uma vez no array.
     valores.push(f.instituicaoId);
     const n = `$${valores.length}`;
     condicoes.push(
@@ -93,9 +92,8 @@ export async function listarReunioes(usuario, filtros) {
         presentes: Number(l.presentes),
         ausentes: Number(l.ausentes),
         convidados: Number(l.convidados),
-        // null enquanto a reunião não encerra: antes disso o número existiria
-        // mas não significaria nada, e a tela mostraria queda de participação
-        // onde só houve reunião que ainda não aconteceu.
+// null enquanto a reunião não encerra: antes disso o número não significaria
+// nada e a tela mostraria queda onde só houve reunião que não aconteceu.
         percentualComparecimento: l.status === 'encerrada'
           ? l.percentual_comparecimento : null,
       })),

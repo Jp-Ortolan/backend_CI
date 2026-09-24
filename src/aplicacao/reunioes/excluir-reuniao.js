@@ -2,12 +2,9 @@
  * CASO DE USO — Excluir reunião.
  *
  * Só para a reunião marcada por engano. Presença e documento apontam para a
- * reunião com "on delete cascade": sem a trigger da migration 003, este delete
- * levaria o histórico junto sem erro nenhum — a falha mais silenciosa que o
- * modelo tinha.
- *
- * Convite não impede: convite é intenção, não fato. O que não pode sumir é
- * quem esteve lá.
+ * reunião com on delete cascade: sem a trigger da migration 003, este delete
+ * levaria o histórico junto sem erro nenhum. Convite não impede — é intenção,
+ * não fato.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';

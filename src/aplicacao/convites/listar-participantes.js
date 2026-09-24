@@ -1,12 +1,9 @@
 /**
  * CASO DE USO — Lista de presença da reunião (RF35, RF36).
  *
- * Convidados e presentes na mesma lista, com os filtros da tela:
- * presente / ausente / convidado / por instituição.
- *
- * A junção mora em vw_reuniao_participante (migration 003), com full join: um
- * join comum perderia as duas pontas que mais interessam — quem foi convidado e
- * faltou, e quem apareceu sem ser chamado.
+ * Convidados e presentes na mesma lista, com os filtros da tela.
+ * A junção é vw_reuniao_participante (migration 003), com full join: um join
+ * comum perderia quem faltou e quem apareceu sem convite.
  */
 import { z } from 'zod';
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';

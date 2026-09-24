@@ -1,16 +1,6 @@
 /**
- * Envio de e-mail.
- *
- * A plataforma anterior mandava o e-mail de recuperação de senha por conta
- * própria. Fora dela, isso passa a ser responsabilidade nossa — e provedor de
- * e-mail é decisão de infraestrutura, não de código.
- *
- * Por isso aqui existe um adaptador:
- *   - sem EMAIL_PROVEDOR configurado, o e-mail é impresso no terminal.
- *     O fluxo funciona e é testável hoje, sem depender de contratar nada.
- *   - com EMAIL_PROVEDOR=resend, envia de verdade.
- *
- * Trocar de provedor é escrever mais um caso no switch.
+ * Envio de e-mail, com adaptador por provedor.
+ * Sem EMAIL_PROVEDOR, imprime no terminal; com `resend`, envia de verdade.
  */
 
 /**
@@ -59,9 +49,8 @@ async function porResend(m) {
 }
 
 /**
- * Nunca deixa a falha de envio derrubar a operação que a originou: se o e-mail
- * não sair, o usuário não pode descobrir isso pela tela — a resposta da
- * recuperação de senha é sempre a mesma, exista ou não a conta.
+ * Falha de envio nunca derruba a operação: a resposta da recuperação de senha é
+ * sempre a mesma, exista ou não a conta.
  *
  * @param {Mensagem} m
  * @returns {Promise<void>}

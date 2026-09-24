@@ -3,16 +3,12 @@
  *
  *   GET /api/saude
  *
- * Para o monitoramento da plataforma e para o QA saber, em um clique, se o
+ * Para o monitoramento da plataforma e para o QA saber, num clique, se o
  * ambiente está de pé e com o banco na versão certa.
  *
- * É a única rota do painel que responde SEM sessão, de propósito: um
- * verificador de saúde não tem como fazer login, e responder 401 para ele faria
- * o monitor acusar queda com o sistema no ar. Em compensação ela não devolve
- * nenhum dado do ecossistema — só se conecta, quantas migrations rodaram e há
- * quanto tempo o processo está de pé.
- *
- * Está na lista de rotas públicas do middleware pelo mesmo motivo.
+ * É a única rota do painel que responde sem sessão (e está na lista de rotas
+ * públicas do middleware): um verificador de saúde não faz login. Em troca, não
+ * devolve dado nenhum do ecossistema.
  */
 import { consulta, consultaUm } from '@/infraestrutura/banco/consulta.js';
 import { log } from '@/infraestrutura/observabilidade/log.js';

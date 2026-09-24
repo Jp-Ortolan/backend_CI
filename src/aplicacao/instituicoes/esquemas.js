@@ -1,12 +1,9 @@
 /**
  * Esquemas de entrada do cadastro de instituição.
  *
- * Espelham o formulário "Nova instituição" do protótipo, campo por campo,
- * incluindo quais têm asterisco. O que a tela marca como obrigatório é
- * obrigatório aqui — e o que ela limita, é limitado aqui.
- *
- * O front valida para dar retorno rápido ao usuário; esta camada valida porque
- * é ela que protege o banco. Um POST direto na API não passa pela tela.
+ * Espelham o formulário Nova instituição campo por campo, inclusive quais são
+ * obrigatórios. O front valida para dar retorno rápido; esta camada valida
+ * porque é ela que protege o banco — um POST direto na API não passa pela tela.
  */
 import { z } from 'zod';
 import { apenasDigitos, cnpjValido } from '@/dominio/cnpj.js';
@@ -78,9 +75,8 @@ const objetoInstituicao = z.object({
   responsavel: opcional(200),
 });
 
-// O banco recusa instituição inativa sem data de saída (constraint
-// instituicao_inativa_tem_saida). Barrar aqui dá uma mensagem apontando o
-// campo, em vez de um erro genérico de constraint.
+// Barrar aqui aponta o campo que falta, em vez de devolver o erro genérico da
+// constraint instituicao_inativa_tem_saida.
 export const esquemaCriar = objetoInstituicao.refine(
   (d) => d.status !== 'inativa' || !!d.dataSaida, {
     message: 'Para cadastrar como inativa é preciso informar a data de saída.',
@@ -88,12 +84,10 @@ export const esquemaCriar = objetoInstituicao.refine(
   });
 
 /**
- * Edição: os mesmos campos, todos opcionais — a tela "Editar instituição" envia
- * o formulário inteiro, mas um PATCH parcial também tem que funcionar.
- *
- * Sem o refine de propósito: num PATCH que manda só `status: 'inativa'`, a data
- * de saída já gravada pode bastar. Quem confere isso contra a linha atual é
- * editar-instituicao.js, que tem acesso ao que está no banco.
+ * Edição: os mesmos campos, todos opcionais — a tela manda o formulário inteiro,
+ * mas um PATCH parcial também tem que funcionar.
+ * Sem refine de propósito: quem confere status contra a data de saída já gravada
+ * é editar-instituicao.js, que enxerga a linha atual.
  */
 export const esquemaEditar = objetoInstituicao.partial();
 
@@ -119,9 +113,9 @@ export const esquemaFiltro = z.object({
 });
 
 /**
- * Converte a entrada validada (camelCase, linguagem da tela) para as colunas do
- * banco (snake_case). Um lugar só faz essa tradução — se ela estiver espalhada,
- * um dia alguém escreve `data_fundacao` num arquivo e `dataFundacao` em outro.
+ * Converte a entrada validada (camelCase da tela) para as colunas do banco
+ * (snake_case). Um lugar só, para não haver `dataFundacao` num arquivo e
+ * `data_fundacao` em outro.
  *
  * @param {Record<string, any>} d
  * @returns {Record<string, any>}

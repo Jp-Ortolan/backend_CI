@@ -1,14 +1,6 @@
 /**
- * Tipos do banco, escritos como JSDoc.
- *
- * Este arquivo não gera código nenhum: são só comentários. O VS Code lê estes
- * @typedef e passa a completar nomes de coluna e avisar quando um valor de
- * status está escrito errado — sem precisar de TypeScript no projeto.
- *
- * Para usar em outro arquivo:
- *
- *     /** @type {import('./tipos-banco.js').Instituicao} *\/
- *     const inst = ...
+ * Tipos do banco escritos como JSDoc — só comentário, não gera código.
+ * Serve para o editor completar nome de coluna e avisar status escrito errado.
  */
 
 /** @typedef {'em_processo_entrada'|'ativa'|'em_processo_saida'|'inativa'} StatusInstituicao */

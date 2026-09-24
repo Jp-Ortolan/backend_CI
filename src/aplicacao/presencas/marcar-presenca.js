@@ -1,17 +1,10 @@
 /**
  * CASO DE USO — Marcar presença ou ausência à mão (RF37, RF38).
  *
- * O QR Code cobre o caso normal. Este cobre o resto, que acontece toda reunião:
- * o celular sem bateria, o representante que chegou atrasado e ninguém escaneou,
- * a justificativa mandada por e-mail na véspera.
- *
- * Sem isso, a única forma de corrigir a lista seria mexer no banco à mão — e o
- * indicador de participação, que é o produto final do sistema, ficaria refém de
- * quem lembrou de escanear.
- *
- * A presença gravada aqui é IGUAL à do QR em tudo que importa: mesmo snapshot
- * de vínculo, mesma entrada nos indicadores. O que muda é `origem = 'manual'` e
- * `registrado_por`, para depois se saber quem lançou o quê.
+ * O QR cobre o caso normal; este cobre o resto, que acontece toda reunião:
+ * celular sem bateria, atrasado que ninguém escaneou, justificativa por e-mail.
+ * A presença é igual à do QR em tudo que importa — mesmo snapshot de vínculo,
+ * mesma entrada nos indicadores; muda `origem = 'manual'` e `registrado_por`.
  */
 import { z } from 'zod';
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
@@ -51,9 +44,8 @@ export async function marcarPresenca(usuario, reuniaoId, entrada) {
     );
     if (!pessoa) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Participante não encontrado.');
 
-    // O vínculo válido NA DATA da reunião, não o de hoje. É a mesma regra que a
-    // função checkin_registrar usa, e é ela que faz a presença de 2025
-    // continuar contando para a instituição de 2025 (decisão de modelagem 2).
+// O vínculo válido NA DATA da reunião, não o de hoje: mesma regra da função
+// checkin_registrar (decisão de modelagem 2).
     const v = await tx.consultaUm(
       `select id, instituicao_id, cargo from vinculo
         where pessoa_id = $1
@@ -69,16 +61,14 @@ export async function marcarPresenca(usuario, reuniaoId, entrada) {
         + `(${r.data}). Registre como convidado pelo check-in, ou crie o vínculo antes.`);
     }
 
-    // A constraint presenca_presente_tem_horario exige horário quando o status
-    // é 'presente'. Ausente e justificado não têm horário porque a pessoa não
-    // chegou — gravar "agora" ali seria inventar um dado.
+// A constraint presenca_presente_tem_horario exige horário só em 'presente':
+// ausente e justificado não chegaram, gravar agora seria inventar dado.
     const horario = d.status === 'presente' ? new Date().toISOString() : null;
 
     let linha;
     try {
-      // A pessoa pode já ter uma linha: check-in feito e depois corrigido, ou
-      // ausência lançada pelo encerramento e depois desfeita. O upsert usa a
-      // constraint presenca_pessoa_unica (reuniao_id, pessoa_id).
+// A pessoa pode já ter linha: check-in corrigido, ausência desfeita. O upsert
+// usa a constraint presenca_pessoa_unica (reuniao_id, pessoa_id).
       linha = await tx.consultaUm(
         `insert into presenca (reuniao_id, pessoa_id, vinculo_id, instituicao_id,
                                cargo_no_momento, tipo, status, origem,

@@ -3,19 +3,14 @@
  *
  *   GET /api/documentos/:id/conteudo
  *
- * OS CABEÇALHOS SÃO A PARTE IMPORTANTE DESTE ARQUIVO.
- *
- * O arquivo é enviado por um usuário e servido a partir do MESMO domínio do
- * sistema. Se o navegador resolvesse renderizá-lo, um HTML disfarçado de PDF
- * rodaria script na sessão de quem abriu — com o cookie de sessão junto.
- *
- * Três cabeçalhos fecham isso:
+ * Os cabeçalhos são a parte importante daqui: o arquivo vem de um usuário e é
+ * servido do mesmo domínio do sistema, então um HTML disfarçado de PDF rodaria
+ * script na sessão de quem abrisse.
  *   Content-Disposition: attachment  — baixa, nunca abre na aba
- *   X-Content-Type-Options: nosniff  — o navegador não "adivinha" outro tipo
- *   Content-Security-Policy          — mesmo que algo escape, não executa
+ *   X-Content-Type-Options: nosniff  — o navegador não adivinha outro tipo
+ *   Content-Security-Policy          — mesmo que escape, não executa
  *
- * A conferência dos bytes mágicos no envio é a outra metade da proteção. As
- * duas juntas, porque nenhuma sozinha cobre tudo.
+ * A conferência dos bytes mágicos no envio é a outra metade da proteção.
  */
 import { baixarDocumento } from '@/aplicacao/documentos/baixar-documento.js';
 import { usuarioAtual } from '@/infraestrutura/seguranca/sessao.js';

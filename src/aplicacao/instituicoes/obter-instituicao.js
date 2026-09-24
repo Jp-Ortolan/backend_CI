@@ -1,9 +1,8 @@
 /**
  * CASO DE USO — Detalhe da instituição (RF08).
  *
- * Monta a tela inteira numa ida só ao banco: os seis cards da aba "Visão geral"
- * e a aba "Representantes". Cada card numa requisição separada seria mais fácil
- * de escrever e daria uma tela que pisca enquanto carrega em seis tempos.
+ * Monta a tela inteira numa ida só ao banco: os seis cards da Visão geral e a
+ * aba Representantes. Uma requisição por card faria a tela piscar em seis tempos.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
@@ -37,14 +36,12 @@ export async function obterInstituicao(usuario, id) {
       [id],
     );
 
-    // Sem linha pode ser "não existe" ou "o RLS não deixou ver". Para quem
-    // chama, o resultado é o mesmo, e responder 404 nos dois casos evita
-    // confirmar a existência de um registro que a pessoa não podia consultar.
+// Sem linha pode ser não existe ou o RLS não deixou ver. Responder 404 nos dois
+// casos evita confirmar registro que a pessoa não podia consultar.
     if (!i) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Instituição não encontrada.');
 
-    // Em série, não em Promise.all: é uma conexão só, dentro de uma transação.
-    // Disparadas juntas, se a primeira falhar as outras rodam numa transação já
-    // abortada e o erro que aparece é o da última, escondendo a causa real.
+// Em série, não Promise.all: é uma conexão só, dentro de uma transação. Juntas,
+// um erro na primeira aborta a transação e esconde a causa real.
     const representantes = await tx.consulta(
         `select v.id as vinculo_id, v.cargo, v.status, v.data_inicio, v.data_fim,
                 p.id as pessoa_id, p.nome, p.email, p.telefone
@@ -66,9 +63,8 @@ export async function obterInstituicao(usuario, id) {
       [id],
     );
 
-      // Indicador nunca sai de coluna gravada: vem sempre das views (decisão 3
-      // da arquitetura). Aqui a view dá o percentual e a consulta ao lado dá as
-      // contagens brutas que os cards mostram.
+// Indicador vem sempre das views (decisão 3): a view dá o percentual e a
+// consulta ao lado dá as contagens brutas dos cards.
     const resumo = await tx.consultaUm(
       `select w.reunioes_esperadas,
                 w.reunioes_com_presenca,

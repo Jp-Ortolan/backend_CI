@@ -41,18 +41,13 @@ const HTTP = {
   EMAIL_DUPLICADO:             409,
   VINCULO_DUPLICADO:           409,
 
-  // 409 e não 403, de propósito: a operação é permitida para este perfil — é o
-  // estado do registro que impede. O front precisa distinguir "você não pode
-  // fazer isso" de "não dá para fazer isso com este dado aqui".
+// 409 e não 403: a ação é permitida, o estado do registro é que impede.
   INSTITUICAO_COM_HISTORICO:   409,
   INSTITUICAO_COM_VINCULO:     409,
 
   DATA_SAIDA_OBRIGATORIA:      422,
 
-  // ------------------------------------------------------- Bloco B (reuniões)
-  // Mesma ideia dos dois acima: excluir é permitido, o histórico é que impede.
-  // Aqui o risco era maior — presenca.reuniao_id é "on delete cascade", então
-  // sem a proteção da migration 003 o delete apagaria as presenças em silêncio.
+// Mesma ideia: excluir é permitido, o histórico é que impede (migration 003).
   REUNIAO_COM_PRESENCA:        409,
   REUNIAO_COM_DOCUMENTO:       409,
   CONVITE_DUPLICADO:           409,
@@ -60,14 +55,11 @@ const HTTP = {
   // ---------------------------------------------------- Bloco C (documentos)
   INSTITUICAO_COM_DOCUMENTO:   409,
 
-  // 413 e 415 são os códigos que o HTTP já tem para exatamente estes dois
-  // casos. Usar 422 para tudo obrigaria o front a ler a mensagem para saber o
-  // que aconteceu.
+// 413 e 415 são os códigos próprios do HTTP para tamanho e tipo.
   ARQUIVO_GRANDE_DEMAIS:       413,
   TIPO_NAO_PERMITIDO:          415,
 
-  // Pedir o conteúdo de um documento que é só um link não é erro do usuário
-  // nem falha do servidor: é a tela chamando a rota errada.
+// Documento que é só link não tem conteúdo para baixar: a tela chamou a rota errada.
   DOCUMENTO_E_LINK:            409,
 };
 

@@ -36,9 +36,8 @@ export async function editarInstituicao(usuario, id, entrada) {
     );
     if (!atual) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Instituição não encontrada.');
 
-    // A constraint instituicao_inativa_tem_saida vale para a linha inteira
-    // depois do update: passar status = 'inativa' sem data de saída quebraria
-    // nela. A checagem aqui só existe para dizer QUAL campo falta.
+// A constraint instituicao_inativa_tem_saida já barraria isso no banco.
+// A checagem aqui existe para dizer QUAL campo falta.
     const statusFinal = colunas.status ?? atual.status;
     const saidaFinal = 'data_saida' in colunas ? colunas.data_saida : atual.data_saida;
     if (statusFinal === 'inativa' && !saidaFinal) {
@@ -58,10 +57,8 @@ export async function editarInstituicao(usuario, id, entrada) {
       traduzirErroDoBanco(e);
     }
 
-    // Aqui a checagem é obrigatória, não paranoia: quando falta política de
-    // UPDATE o PostgreSQL não levanta erro nenhum — ele simplesmente não
-    // enxerga a linha e afeta zero registros, em silêncio. Sem este if, um
-    // perfil de consulta receberia "salvo com sucesso" sem ter salvado nada.
+// Sem política de UPDATE o Postgres não levanta erro: não enxerga a linha e
+// afeta zero registros. Sem este if, o perfil de consulta veria salvo com sucesso.
     if (!linha) {
       throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite editar esta instituição.');
     }

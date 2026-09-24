@@ -1,13 +1,9 @@
 /**
  * CASO DE USO — Histórico de participação da instituição (RF42, RF45).
  *
- * O detalhe da instituição já traz os números do resumo. Aqui é a linha do
- * tempo: reunião a reunião, quem da instituição era esperado e quem apareceu.
- *
- * A diferença que importa: uma instituição pode ter vários representantes na
- * mesma reunião. "A instituição participou" quer dizer que PELO MENOS UM
- * apareceu — contar por pessoa faria uma instituição com cinco representantes
- * parecer pior que uma com um só, quando as duas mandaram alguém.
+ * A linha do tempo, reunião a reunião: quem era esperado e quem apareceu.
+ * A instituição participou = pelo menos um representante apareceu; contar por
+ * pessoa faria quem tem cinco representantes parecer pior que quem tem um.
  */
 import { z } from 'zod';
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';

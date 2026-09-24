@@ -1,11 +1,8 @@
 import { pool } from './pool.js';
 
 /**
- * Consulta simples, fora de qualquer sessão de usuário.
- *
- * Como a aplicação conecta com o papel `app_web`, que não é dono das tabelas, o
- * RLS está valendo: sem declarar o usuário, esta função praticamente não enxerga
- * dado nenhum. Use-a só para chamar as funções públicas (check-in, login).
+ * Consulta fora de sessão de usuário. Com o RLS valendo, enxerga quase nada:
+ * use só para as funções públicas (check-in, login).
  *
  * @param {string} sql
  * @param {unknown[]} [valores]
@@ -37,13 +34,8 @@ export async function consultaUm(sql, valores = []) {
  */
 
 /**
- * Abre uma transação declarando QUEM é o usuário.
- *
- * O `set_config(..., true)` grava o id só para esta transação — duas
- * requisições simultâneas nunca enxergam o usuário uma da outra. É a partir
- * daqui que as políticas de RLS sabem o que liberar.
- *
- * Toda leitura ou escrita de dado do ecossistema DEVE passar por aqui.
+ * Abre uma transação declarando quem é o usuário — é daqui que o RLS sabe o que
+ * liberar. Toda leitura ou escrita de dado do ecossistema passa por aqui.
  *
  * @template T
  * @param {string} usuarioId

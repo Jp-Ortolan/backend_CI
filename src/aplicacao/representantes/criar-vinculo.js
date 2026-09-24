@@ -1,13 +1,10 @@
 /**
  * CASO DE USO — Vincular uma pessoa já cadastrada a uma instituição (RF15, RF17).
  *
- * Complementa criar-representante.js: aqui a pessoa já existe e está mudando de
- * instituição, ou passando a representar uma segunda.
- *
- * O vínculo antigo NÃO é encerrado automaticamente. Representar duas
- * instituições ao mesmo tempo é legítimo no ecossistema, e adivinhar que o
- * anterior acabou apagaria período de participação sem ninguém ter pedido.
- * Quem sai de uma instituição encerra o vínculo pela rota própria.
+ * Complementa criar-representante.js: aqui a pessoa já existe.
+ * O vínculo antigo NÃO é encerrado automaticamente — representar duas
+ * instituições ao mesmo tempo é legítimo, e adivinhar apagaria período de
+ * participação. Quem sai encerra pela rota própria.
  */
 import { z } from 'zod';
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';

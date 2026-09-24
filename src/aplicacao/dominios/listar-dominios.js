@@ -1,13 +1,9 @@
 /**
  * CASO DE USO — Opções dos selects de classificação.
  *
- * Os dois campos obrigatórios do formulário "Nova instituição": "Tipo de
- * instituição" e "Área de atuação". Uma requisição só devolve os dois, porque
- * a tela precisa dos dois ao mesmo tempo e sempre.
- *
- * Só o que está `ativo` aparece. Registro desativado continua no banco para as
- * instituições antigas não ficarem apontando para o nada — ele some do select,
- * não da base.
+ * Tipo de instituição e área de atuação numa requisição só, porque a tela
+ * precisa das duas ao mesmo tempo. Só o que está `ativo` aparece: registro
+ * desativado some do select, não da base.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { exigir } from '@/aplicacao/guarda.js';

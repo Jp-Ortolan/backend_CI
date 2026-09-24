@@ -40,9 +40,8 @@ export async function POST(req) {
     /** @type {{nome: string, mime: string, conteudo: Buffer}|null} */
     let arquivo = null;
     if (enviado && typeof enviado !== 'string') {
-      // O tamanho é conferido de novo no caso de uso, sobre os bytes reais.
-      // Aqui a checagem é só para não carregar na memória um arquivo que já se
-      // sabe grande demais.
+// O tamanho é conferido de novo no caso de uso, sobre os bytes reais. Aqui é só
+// para não carregar na memória um arquivo que já se sabe grande demais.
       if (enviado.size > LIMITE_BYTES) {
         const { ErroDeNegocio } = await import('@/dominio/erros.js');
         const { tamanhoLegivel } = await import('@/dominio/arquivos.js');

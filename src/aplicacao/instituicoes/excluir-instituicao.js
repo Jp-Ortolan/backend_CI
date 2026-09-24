@@ -1,13 +1,10 @@
 /**
  * CASO DE USO — Excluir instituição.
  *
- * Só serve para o cadastro criado por engano, que ainda não tem histórico
- * nenhum. Instituição que já participou de reunião não se exclui, se desativa —
- * a regra está na trigger instituicao_protege_historico (migration 002), e o
- * banco recusa mesmo que esta camada fosse contornada.
- *
- * A checagem aqui existe para dar ao front uma mensagem que diz o que fazer em
- * vez de um erro de constraint, e para contar quantos registros impedem.
+ * Só para o cadastro criado por engano. Instituição que já participou de reunião
+ * não se exclui, se desativa: a trigger instituicao_protege_historico
+ * (migration 002) recusa mesmo se esta camada fosse contornada. A checagem aqui
+ * existe para dar mensagem útil e contar quantos registros impedem.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';
@@ -58,9 +55,8 @@ export async function excluirInstituicao(usuario, id) {
       traduzirErroDoBanco(e);
     }
 
-    // DELETE sem política não levanta erro: afeta zero linhas em silêncio. Sem
-    // este if, um gestor veria "excluída com sucesso" e a instituição
-    // continuaria na lista depois do F5.
+// DELETE sem política afeta zero linhas em silêncio. Sem este if, o gestor veria
+// excluída com sucesso e ela voltaria no F5.
     if (!linha) {
       throw new ErroDeNegocio('SEM_PERMISSAO',
         'Apenas o administrador pode excluir instituições.');

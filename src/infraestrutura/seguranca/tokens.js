@@ -2,13 +2,8 @@ import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 
 /**
  * Tokens de sessão e de recuperação de senha.
- *
- * O valor sorteado vai para o cookie ou para o link do e-mail; no banco fica
- * apenas o SHA-256 dele. Assim, quem conseguir ler a tabela não consegue montar
- * um cookie válido nem usar um link de recuperação.
- *
- * SHA-256 aqui é adequado (e não Argon2) porque o token já é aleatório de 256
- * bits — não há o que adivinhar, então o custo alto não traria ganho.
+ * O valor sorteado vai no cookie ou no link; no banco fica só o SHA-256 dele.
+ * SHA-256 basta porque o token já é aleatório de 256 bits.
  *
  * @returns {string}
  */

@@ -1,12 +1,9 @@
 /**
  * CASO DE USO — Registrar a resposta de um convite.
  *
- * Quem registra é o gestor: o representante não tem login no sistema, então a
- * confirmação chega por e-mail, telefone ou conversa e alguém do Centro anota.
- *
- * Confirmar NÃO é o mesmo que estar presente. A presença só existe depois do
- * check-in ou da marcação manual — quem confirma e falta continua sendo uma
- * ausência, e é justamente esse o número que interessa medir.
+ * Quem anota é o gestor: o representante não tem login, a confirmação chega por
+ * e-mail ou telefone. Confirmar não é estar presente — quem confirma e falta
+ * continua sendo ausência, e é esse número que interessa medir.
  */
 import { z } from 'zod';
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
@@ -47,9 +44,8 @@ export async function responderConvite(usuario, conviteId, entrada) {
         + 'o que vale agora é a presença registrada.');
     }
 
-    // A constraint convite_respondido_tem_data exige data quando o status sai
-    // de 'pendente', e exige que ela suma quando volta. Fazer isso aqui deixa a
-    // regra visível; o banco continua conferindo.
+// A constraint convite_respondido_tem_data exige data fora de 'pendente'.
+// Fazer aqui deixa a regra visível; o banco continua conferindo.
     const respondidoEm = status === 'pendente' ? null : new Date().toISOString();
 
     let linha;

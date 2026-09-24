@@ -1,23 +1,14 @@
 /**
  * Limite de requisições por IP nas rotas públicas (RNF14).
- *
- * Só o check-in precisa disto: as rotas do painel já exigem sessão, e sessão é
- * um limite melhor que IP. Aqui não há usuário nenhum, então o IP é o que
- * existe para agrupar.
- *
- * O contador mora no banco (migration 005) e não em memória — contador em
- * memória zera a cada deploy e não é compartilhado entre instâncias.
+ * Só o check-in precisa: o painel já exige sessão, que é limite melhor que IP.
+ * O contador mora no banco (migration 005), não em memória.
  */
 import { consultaUm } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 
 /**
  * Limites por ação, na janela indicada.
- *
- * A busca é mais apertada que o registro porque ela é a que expõe dado: cada
- * chamada devolve nome, instituição e cargo de até 5 pessoas. Registrar
- * presença, por outro lado, é o que o participante legítimo faz — e ele pode
- * errar o nome algumas vezes antes de acertar.
+ * A busca é mais apertada porque devolve nome, instituição e cargo de outras pessoas.
  */
 const LIMITES = {
   buscar: { maximo: 20, janela: '1 minute' },
@@ -26,14 +17,9 @@ const LIMITES = {
 };
 
 /**
- * Extrai o IP de quem chamou.
- *
- * Atrás de proxy (Railway, Vercel) o IP real vem em x-forwarded-for, que é uma
- * lista onde o PRIMEIRO endereço é o cliente. Vale lembrar que esse cabeçalho é
- * enviável por qualquer um: ele só é confiável porque o proxy da plataforma o
- * reescreve. Rodando sem proxy na frente, dá para forjar — e por isso este
- * limite é proteção contra abuso casual e script simples, não contra um
- * atacante determinado com muitos IPs.
+ * IP de quem chamou. Atrás de proxy vem em x-forwarded-for, cujo primeiro
+ * endereço é o cliente. Sem proxy na frente dá para forjar: isto barra abuso
+ * casual, não atacante determinado.
  *
  * @param {import('next/server').NextRequest|Request} req
  * @returns {string}

@@ -1,11 +1,8 @@
 /**
  * CASO DE USO — Remover documento.
  *
- * Documento pode ser removido, diferente de presença e de vínculo: ele não
- * sustenta indicador nenhum, e anexo trocado por engano é comum.
- *
- * Só administrador, seguindo a matriz de permissões — a mesma regra que impede
- * gestor de excluir instituição.
+ * Diferente de presença e vínculo, documento pode sumir: não sustenta indicador
+ * nenhum. Só administrador, seguindo a matriz de permissões.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { remover } from '@/infraestrutura/armazenamento/index.js';
@@ -25,9 +22,8 @@ export async function removerDocumento(usuario, id) {
     );
     if (!d) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Documento não encontrado.');
 
-    // Explícito, mesmo com o "on delete cascade" dando conta: com armazenamento
-    // externo o banco não teria como apagar o objeto, e a ordem certa (apagar o
-    // conteúdo, depois o metadado) fica escrita desde agora.
+// Explícito mesmo com o cascade: com armazenamento externo o banco não apagaria
+// o objeto, e a ordem certa (conteúdo, depois metadado) já fica escrita.
     await remover(tx, { documentoId: d.id, caminho: d.storage_path });
 
     const linha = await tx.consultaUm(

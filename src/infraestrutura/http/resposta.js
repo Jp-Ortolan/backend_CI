@@ -22,9 +22,8 @@ export function ok(dados, status = 200) {
  */
 export function falha(e) {
   if (e instanceof ErroDeNegocio) {
-    // Erro de negócio é fluxo normal — CNPJ repetido, sem permissão, limite
-    // estourado. Registrar como aviso mantém o nível "erro" significando
-    // "alguém precisa olhar isso", que é o que faz o log servir para alerta.
+// Erro de negócio é fluxo normal; fica em aviso para o nível erro continuar
+// significando alguém precisa olhar isso.
     log.aviso('erro_de_negocio', { codigo: e.codigo, status: e.status });
 
     return NextResponse.json(

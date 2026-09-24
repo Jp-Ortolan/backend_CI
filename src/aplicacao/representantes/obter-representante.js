@@ -1,15 +1,9 @@
 /**
  * CASO DE USO — Detalhe e histórico do representante (RF41, RF44).
  *
- * A parte que faz este caso de uso valer: o histórico é por VÍNCULO, não por
- * pessoa. Quem passou pela Universidade Alfa até 05/2025 e hoje está na Startup
- * Beta tem duas linhas de participação, cada uma contando só as reuniões do seu
- * período. Somar tudo numa linha só atribuiria à Startup Beta reuniões de que
- * ela nem participava ainda.
- *
- * Quem faz esse corte é a view vw_participacao_representante, que se apoia em
- * vw_reuniao_esperada — e essa só considera reunião ocorrida dentro da vigência
- * do vínculo.
+ * O histórico é por VÍNCULO, não por pessoa: quem mudou de instituição tem duas
+ * linhas de participação, cada uma contando só as reuniões do seu período.
+ * Quem faz esse corte é a view vw_participacao_representante.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';

@@ -1,11 +1,9 @@
 /**
  * CASO DE USO — Cancelar, reabrir ou iniciar uma reunião.
  *
- * O encerramento NÃO passa por aqui: ele tem regra própria (marcar os ausentes,
- * fechar o denominador dos indicadores) e vive em encerrar-reuniao.js.
- *
- * Cancelar é o caminho para a reunião que não vai acontecer. Ela continua
- * existindo, com os convites e o histórico — some da agenda, não da base.
+ * O encerramento não passa por aqui: tem regra própria e vive em
+ * encerrar-reuniao.js. Cancelar mantém convites e histórico — a reunião some da
+ * agenda, não da base.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';

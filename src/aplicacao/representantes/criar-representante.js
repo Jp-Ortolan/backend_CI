@@ -1,15 +1,10 @@
 /**
  * CASO DE USO — Cadastrar representante (RF14, RF15).
  *
- * "Cadastrar um representante" é, no modelo, duas coisas: registrar a PESSOA e
- * criar o VÍNCULO dela com uma instituição. Esta função faz as duas numa
- * transação só — pessoa sem vínculo não aparece em lugar nenhum do sistema, e
- * deixar as duas metades em requisições separadas criaria pessoas órfãs toda
- * vez que a segunda falhasse.
- *
- * Se a pessoa já existir (mesmo e-mail), o vínculo novo é criado sobre a pessoa
- * existente em vez de duplicá-la. É o caso de quem troca de instituição — a
- * decisão de modelagem número 1 existe exatamente para isso.
+ * Cadastrar é duas coisas: registrar a PESSOA e criar o VÍNCULO dela com uma
+ * instituição — as duas na mesma transação, senão a falha da segunda deixa
+ * pessoa órfã. Se o e-mail já existe, o vínculo novo é criado sobre a pessoa
+ * existente (decisão de modelagem 1): é o caso de quem troca de instituição.
  */
 import { z } from 'zod';
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
@@ -50,9 +45,8 @@ export async function criarRepresentante(usuario, entrada) {
     /** @type {{id: string, nome: string}|null} */
     let pessoa = null;
 
-    // Reaproveita a pessoa quando o e-mail já está cadastrado. Sem e-mail não
-    // dá para afirmar que é a mesma pessoa — dois "João Silva" podem ser dois
-    // Joões —, então nesse caso cria uma nova e a deduplicação fica manual.
+// Reaproveita a pessoa pelo e-mail. Sem e-mail não dá para afirmar que é a mesma
+// pessoa (dois João Silva), então cria outra e a deduplicação fica manual.
     if (dados.email) {
       pessoa = await tx.consultaUm(
         'select id, nome from pessoa where email = $1', [dados.email],

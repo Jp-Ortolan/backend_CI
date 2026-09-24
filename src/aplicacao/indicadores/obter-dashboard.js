@@ -1,17 +1,10 @@
 /**
  * CASO DE USO — Indicadores do dashboard (RF46).
  *
- * Alimenta os três cartões do topo, o gráfico de participação por instituição e
- * o bloco "Próximas reuniões".
- *
- * Nenhum número aqui é lido de coluna gravada: tudo vem das views vw_* (decisão
- * de arquitetura número 3). Indicador guardado é indicador que envelhece — na
- * primeira correção de presença o número da tela e o dado do banco divergem, e
- * ninguém descobre até alguém conferir na mão.
- *
- * A média de presença usa percentual_comparecimento, corrigido na migration
- * 002: representantes presentes ÷ vínculos vigentes na data da reunião,
- * convidado avulso fora da conta.
+ * Cartões do topo, gráfico de participação por instituição e próximas reuniões.
+ * Nenhum número sai de coluna gravada: tudo vem das views vw_* (decisão 3).
+ * A média usa percentual_comparecimento (migration 002): representantes
+ * presentes ÷ vínculos vigentes na data, convidado avulso fora da conta.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { exigir } from '@/aplicacao/guarda.js';

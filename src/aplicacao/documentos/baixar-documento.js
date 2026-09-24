@@ -35,9 +35,8 @@ export async function baixarDocumento(usuario, id) {
 
     const conteudo = await ler(tx, { documentoId: d.id, caminho: d.storage_path });
 
-    // Metadado sem conteúdo não deveria existir — as duas gravações são feitas
-    // na mesma transação. Se acontecer, é defeito, e responder 404 esconderia
-    // um banco inconsistente em vez de expor.
+// Metadado sem conteúdo é defeito: as duas gravações são a mesma transação.
+// Responder 404 esconderia um banco inconsistente.
     if (!conteudo) {
       throw new ErroDeNegocio('ERRO_INTERNO',
         'O conteúdo deste documento não foi encontrado no armazenamento.');

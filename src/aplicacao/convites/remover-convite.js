@@ -1,12 +1,9 @@
 /**
  * CASO DE USO — Remover um convite.
  *
- * Para o convite mandado por engano. Diferente da presença, o convite pode ser
- * apagado: é intenção, não fato — remover não reescreve o que aconteceu.
- *
- * Se a pessoa já compareceu, a presença dela continua lá depois de o convite
- * sair. Ela deixa de constar como "convidada" e passa a constar como quem
- * apareceu sem convite, que é exatamente o que teria acontecido.
+ * Convite é intenção, não fato: pode ser apagado sem reescrever o que aconteceu.
+ * Se a pessoa já compareceu, a presença continua — ela passa a constar como quem
+ * apareceu sem convite.
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';

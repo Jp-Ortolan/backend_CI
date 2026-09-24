@@ -1,12 +1,7 @@
 /**
  * Matriz de permissões — RF03.
- *
- * Esta é a fonte única de "o que cada perfil enxerga e pode fazer".
- * A interface usa isto para mostrar ou esconder ações; o banco repete a mesma
- * regra em RLS (migration 007), porque interface não é controle de acesso.
- *
- * Quando um perfil novo ou um recurso novo entrar, muda-se AQUI e na migration —
- * nos dois lugares, sempre.
+ * Fonte única do que cada perfil pode fazer. O banco repete a mesma regra em RLS,
+ * então perfil ou recurso novo muda aqui E na migration.
  */
 
 /** @typedef {import('./tipos.js').PapelUsuario} Papel */
@@ -32,8 +27,7 @@ const MATRIZ = {
     presenca: TODAS, documento: TODAS, usuario: TODAS, indicador: ['ver', 'exportar'],
   },
   gestor: {
-    // Gestor opera o dia a dia, mas não apaga registro nem administra usuários:
-    // exclusão de instituição ou de vínculo destruiria histórico de participação.
+// Gestor não exclui nem administra usuários: excluir destruiria histórico.
     instituicao: ESCRITA, representante: ESCRITA, vinculo: ESCRITA, reuniao: ESCRITA,
     presenca: ESCRITA, documento: ESCRITA, usuario: [], indicador: ['ver', 'exportar'],
   },

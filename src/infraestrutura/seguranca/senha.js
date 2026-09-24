@@ -1,11 +1,8 @@
 import { hash, verify } from '@node-rs/argon2';
 
 /**
- * Hash de senha com Argon2id.
- *
- * Argon2id é o algoritmo recomendado pela OWASP hoje: além de ser lento de
- * propósito, ele consome memória, o que encarece muito um ataque de força bruta
- * feito em placa de vídeo. Os parâmetros abaixo seguem a recomendação de 19 MiB.
+ * Hash de senha com Argon2id: lento de propósito e caro em memória, que é o que
+ * encarece força bruta em GPU. Parâmetros seguem os 19 MiB da OWASP.
  */
 const OPCOES = { memoryCost: 19456, timeCost: 2, parallelism: 1 };
 
