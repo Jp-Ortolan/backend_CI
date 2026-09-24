@@ -80,18 +80,22 @@ O seed traz três acessos, todos com a senha **`senha123456`**:
 | `carla@centroinovacao.br` | Gestor |
 | `bruno@centroinovacao.br` | Consulta |
 
-Entre com cada um para ver o menu mudar — é a matriz de permissões funcionando.
+Entre com cada um (`POST /api/sessao`) para ver o `menu` da resposta mudar — é a
+matriz de permissões funcionando.
+
+> **Este projeto é só back-end.** Não há telas: `src/app/` tem apenas `api/`.
+> O front-end é outro projeto e consome estas rotas por HTTP. Como entrar,
+> recuperar senha e configurar CORS está na última seção de
+> `docs/04-contrato-de-api.md`.
 
 ## Estrutura de pastas
 
 ```
 backend_CI/
 ├── src/
-│   ├── app/                        # ① Apresentação — telas e rotas HTTP
-│   │   ├── (acesso)/               #    login, recuperar e redefinir senha
-│   │   ├── (painel)/               #    área autenticada (dashboard)
-│   │   ├── api/                    #    24 rotas REST
-│   │   └── middleware.js           #    exige sessão fora das rotas públicas
+│   ├── app/                        # ① Apresentação — só rotas HTTP
+│   │   └── api/                    #    27 rotas REST (não há telas: só back-end)
+│   ├── middleware.js               # CORS + exige sessão fora das rotas públicas
 │   ├── aplicacao/                  # ② Casos de uso — uma ação por arquivo
 │   │   ├── autenticacao/           #    entrar, recuperar senha
 │   │   ├── instituicoes/           #    CRUD, busca, status, histórico

@@ -1,10 +1,7 @@
 /**
  * CASO DE USO — Entrar no sistema (RF01).
- *
- * Camada de aplicação: orquestra o que precisa acontecer, na ordem certa.
- * Não sabe que existe HTTP, formulário ou tela — recebe dados simples e
- * devolve dados simples. Quem traduz isso para a web é a camada de
- * apresentação (src/app).
+ * Camada de aplicação: recebe dados simples e devolve dados simples; não sabe
+ * que existe HTTP, formulário ou tela.
  */
 import { z } from 'zod';
 import { consultaUm } from '@/infraestrutura/banco/consulta.js';
@@ -28,13 +25,12 @@ export const esquemaEntrar = z.object({
 
 /**
  * Confere as credenciais e, dando certo, abre a sessão.
- *
- * A mensagem de erro é sempre a mesma para e-mail inexistente, senha errada e
- * conta desativada. Diferenciar entregaria a quem tentar a lista de quem tem
- * conta no sistema.
+ * A mensagem de erro é a mesma para e-mail inexistente, senha errada e conta
+ * desativada: diferenciar entregaria a lista de quem tem conta.
  *
  * @param {{ email: string, senha: string, ip?: string|null, agente?: string|null }} entrada
- * @returns {Promise<{ ok: true } | { ok: false, erro: string }>}
+ * @returns {Promise<{ ok: true, usuario: import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao }
+ *   | { ok: false, erro: string }>}
  */
 export async function entrar({ email, senha, ip = null, agente = null }) {
   const analise = esquemaEntrar.safeParse({ email, senha });
@@ -48,9 +44,8 @@ export async function entrar({ email, senha, ip = null, agente = null }) {
     [analise.data.email],
   );
 
-  // A conferência roda mesmo quando o e-mail não existe: se ela fosse pulada,
-  // a resposta voltaria bem mais rápido nesse caso e o tempo entregaria a
-  // informação que a mensagem esconde.
+// Confere mesmo sem o e-mail existir: pular deixaria a resposta mais rápida e
+// o tempo entregaria o que a mensagem esconde.
   const senhaConfere = await conferir(analise.data.senha, u?.senha_hash ?? null);
 
   if (!u || !u.ativo || !senhaConfere) {
@@ -58,5 +53,11 @@ export async function entrar({ email, senha, ip = null, agente = null }) {
   }
 
   await abrirSessao(u.id, ip, agente);
-  return { ok: true };
+
+  // Devolve o usuário junto: o cookie acabou de ser gravado e ainda não está
+  // legível nesta requisição, então uma segunda ida ao banco seria em vão.
+  return {
+    ok: true,
+    usuario: { id: u.id, nome: u.nome, email: u.email, papel: u.papel, ativo: u.ativo },
+  };
 }

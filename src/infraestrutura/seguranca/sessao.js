@@ -1,10 +1,15 @@
 import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
 import { consulta, consultaUm } from '@/infraestrutura/banco/consulta.js';
-import { pode } from '@/dominio/permissoes.js';
 import { DURACAO_SESSAO_HORAS, gerarToken, hashToken } from './tokens.js';
 
 export const COOKIE_SESSAO = 'sessao';
+
+/**
+ * Front e API no mesmo domínio: 'lax' basta e protege contra CSRF. Em domínios
+ * diferentes o navegador só manda o cookie com sameSite 'none' + secure — daí a
+ * variável COOKIE_CROSS_SITE, que também exige HTTPS dos dois lados.
+ */
+const ENTRE_DOMINIOS = process.env.COOKIE_CROSS_SITE === '1';
 
 /**
  * @typedef {object} UsuarioSessao
@@ -18,9 +23,9 @@ export const COOKIE_SESSAO = 'sessao';
 /**
  * Cria a sessão e grava o cookie.
  *
- * httpOnly    — JavaScript da página não lê o cookie, então um XSS não rouba a sessão
- * sameSite    — o cookie não viaja em requisição vinda de outro site (proteção CSRF)
- * secure      — só trafega em HTTPS fora do ambiente local
+ * httpOnly  — JavaScript da página não lê o cookie, então um XSS não rouba a sessão
+ * sameSite  — de onde o cookie pode viajar (ver ENTRE_DOMINIOS acima)
+ * secure    — só trafega em HTTPS
  *
  * @param {string} usuarioId
  * @param {string|null} [ip]
@@ -37,8 +42,8 @@ export async function abrirSessao(usuarioId, ip, agente) {
 
   cookies().set(COOKIE_SESSAO, token, {
     httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    sameSite: ENTRE_DOMINIOS ? 'none' : 'lax',
+    secure: ENTRE_DOMINIOS || process.env.NODE_ENV === 'production',
     path: '/',
     expires: expira,
   });
@@ -66,31 +71,4 @@ export async function usuarioAtual() {
     'select id, nome, email, papel, ativo from auth_ler_sessao($1)',
     [hashToken(token)],
   );
-}
-
-/**
- * Igual ao anterior, mas manda para o login quando não há sessão válida.
- *
- * @param {string} [destino]
- * @returns {Promise<UsuarioSessao>}
- */
-export async function exigirUsuario(destino) {
-  const u = await usuarioAtual();
-  if (!u) {
-    redirect(`/login${destino ? `?redirecionar=${encodeURIComponent(destino)}` : ''}`);
-  }
-  return u;
-}
-
-/**
- * Exige uma permissão específica. Use em Server Component ou Server Action.
- *
- * @param {import('@/dominio/permissoes.js').Recurso} recurso
- * @param {import('@/dominio/permissoes.js').Acao} acao
- * @returns {Promise<UsuarioSessao>}
- */
-export async function exigirPermissao(recurso, acao) {
-  const u = await exigirUsuario();
-  if (!pode(u.papel, recurso, acao)) redirect('/sem-permissao');
-  return u;
 }

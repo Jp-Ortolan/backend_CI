@@ -8,6 +8,7 @@ import {
   DURACAO_RECUPERACAO_MINUTOS, gerarToken, hashToken,
 } from '@/infraestrutura/seguranca/tokens.js';
 import { enviar } from '@/infraestrutura/email/enviar.js';
+import { urlDoFront } from '@/infraestrutura/http/front.js';
 
 export const esquemaPedido = z.object({
   email: z.string().trim().email('Informe um e-mail válido.'),
@@ -23,10 +24,8 @@ export const esquemaNovaSenha = z.object({
 
 /**
  * Gera o token e manda o e-mail com o link.
- *
- * Responde sempre a mesma coisa, exista ou não a conta: senão o formulário
- * viraria um verificador de quem tem cadastro. Quem decide se existe conta é a
- * função do banco, em silêncio.
+ * Responde sempre igual, exista ou não a conta, senão o formulário viraria um
+ * verificador de cadastro. Quem decide é a função do banco.
  *
  * @param {{ email: string }} entrada
  * @returns {Promise<{ ok: true, mensagem: string } | { ok: false, erro: string }>}
@@ -44,7 +43,7 @@ export async function pedirRecuperacao({ email }) {
     analise.data.email, hashToken(token), expira.toISOString(),
   ]);
 
-  const base = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
+  const base = urlDoFront();
   await enviar({
     para: analise.data.email,
     assunto: 'Redefinir sua senha — Ecossistema de Inovação',

@@ -119,7 +119,8 @@ Variáveis do serviço da aplicação:
 | Variável | Valor |
 |---|---|
 | `DATABASE_URL` | string com o usuário **app_web** |
-| `NEXT_PUBLIC_APP_URL` | a URL pública do serviço |
+| `URL_FRONTEND` | a URL pública do **front-end**: origem liberada no CORS, base do QR e do link de senha |
+| `COOKIE_CROSS_SITE` | `1` só quando front e API ficam em domínios diferentes |
 | `EMAIL_PROVEDOR` | `resend` quando houver conta; sem ela, o link sai no log |
 | `RESEND_API_KEY` | chave do provedor |
 | `EMAIL_REMETENTE` | remetente verificado |

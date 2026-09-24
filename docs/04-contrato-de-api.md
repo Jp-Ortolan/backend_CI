@@ -13,6 +13,10 @@ quem é o usuário para o RLS.
 > documento. A regra de segurança não mudou: toda rota abre a transação com o
 > usuário declarado e o RLS continua decidindo o que cada perfil enxerga.
 
+> **Atualizado em 10/09/2026.** O projeto passou a ser só back-end: as telas
+> saíram de `src/app/` e o login virou rota de API. O que mudou está na última
+> seção, "Autenticação e CORS".
+
 ## Convenções
 
 - Datas em ISO 8601. `timestamptz` sempre em UTC; a formatação é do front.
@@ -820,3 +824,107 @@ ARMAZENAMENTO=postgres        # único adaptador hoje; ver src/infraestrutura/ar
 UPLOAD_LIMITE_BYTES=20971520  # 20 MB
 ```
 
+
+---
+
+# Autenticação e CORS — o projeto virou só back-end (10/09/2026)
+
+As telas saíram de `src/app/`: a equipe é responsável apenas pelo back-end e o
+front é outro projeto, em outro endereço. `src/app/` agora tem só `api/`.
+
+## O que mudou para quem consome a API
+
+| Antes | Agora |
+|---|---|
+| Login por Server Action, na tela `/login` | `POST /api/sessao` |
+| `POST /sair`, com redirect para `/login` | `DELETE /api/sessao` |
+| Sem sessão: redirect 307 para `/login` | Sem sessão: **401 `NAO_AUTENTICADO`** em JSON |
+| `NEXT_PUBLIC_APP_URL` | `URL_FRONTEND` (o nome antigo continua aceito) |
+
+A sessão continua num cookie `httpOnly` chamado `sessao`. O front precisa mandar
+`credentials: 'include'` em **toda** chamada — sem isso o navegador não anexa o
+cookie e a resposta é 401.
+
+## `POST /api/sessao` — entrar (RF01)
+
+```json
+{ "email": "maria@centroinovacao.br", "senha": "..." }
+```
+
+200 — e o `Set-Cookie` da sessão vem junto:
+
+```json
+{
+  "id": "uuid",
+  "nome": "Maria",
+  "email": "maria@centroinovacao.br",
+  "papel": "gestor",
+  "rotuloPapel": "Gestor",
+  "menu": [
+    { "rotulo": "Dashboard", "href": "/dashboard", "recurso": "indicador" },
+    { "rotulo": "Instituições", "href": "/instituicoes", "recurso": "instituicao" }
+  ]
+}
+```
+
+`menu` já vem filtrado pelo papel (RF03): é a matriz de permissões do back-end,
+para o front não reimplementar a regra na tela.
+
+Erro: 401 `NAO_AUTENTICADO`, com a mesma mensagem para e-mail inexistente, senha
+errada e conta desativada.
+
+## `GET /api/sessao` — quem está logado
+
+Mesma resposta do POST. 401 `NAO_AUTENTICADO` quando não há sessão válida. Serve
+para o front decidir, ao abrir, se manda para o login ou para o painel.
+
+## `DELETE /api/sessao` — sair
+
+200 `{ "encerrada": true }`. Idempotente: responde igual mesmo sem sessão.
+
+## `POST /api/senha/recuperar` — RF02
+
+```json
+{ "email": "maria@centroinovacao.br" }
+```
+
+200 sempre, exista ou não a conta:
+
+```json
+{ "mensagem": "Se existir uma conta com esse e-mail, enviamos as instruções para redefinir a senha." }
+```
+
+O link do e-mail aponta para `URL_FRONTEND/redefinir-senha?token=...` — a tela é
+do front; o back só monta o endereço.
+
+## `POST /api/senha/redefinir` — RF02
+
+```json
+{ "token": "...", "senha": "novaSenha123", "confirmacao": "novaSenha123" }
+```
+
+200 `{ "mensagem": "Senha alterada. Você já pode entrar com a nova senha." }`.
+422 `DADOS_INVALIDOS` quando o link expirou, já foi usado ou as senhas não batem.
+
+## Rotas públicas
+
+Só estas quatro dispensam sessão: `/api/sessao`, `/api/senha/*`,
+`/api/checkin/*` e `/api/saude`. Todas as outras respondem 401 sem o cookie,
+antes mesmo de chegar na rota (`src/middleware.js`).
+
+## CORS
+
+O middleware libera **uma** origem: a configurada em `URL_FRONTEND`, com
+`Access-Control-Allow-Credentials: true`. Requisição `OPTIONS` (preflight)
+responde 204 com os métodos e `Content-Type` liberados.
+
+Se o front rodar num domínio diferente do da API, o cookie só viaja com
+`sameSite=none` — ligue `COOKIE_CROSS_SITE=1`. Isso exige HTTPS dos dois lados.
+Com front e API sob o mesmo domínio, deixe desligado: `lax` é mais seguro.
+
+## Variáveis de ambiente acrescentadas
+
+```
+URL_FRONTEND=https://front.exemplo.br   # origem liberada no CORS, base do QR e do link de senha
+COOKIE_CROSS_SITE=0                     # 1 só quando front e API ficam em domínios diferentes
+```

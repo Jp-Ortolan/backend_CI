@@ -7,17 +7,16 @@
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir } from '@/aplicacao/guarda.js';
+import { urlDoFront } from '@/infraestrutura/http/front.js';
 
 /**
- * URL que o QR Code carrega. Sai daqui e não do front porque o endereço
- * público do sistema é configuração de ambiente, não de tela — em homologação e
- * em produção ele é diferente, e um valor fixo no front geraria QR apontando
- * para o ambiente errado.
+ * URL que o QR Code carrega: a tela pública de check-in, que vive no front.
+ * Montada aqui porque o endereço é configuração de ambiente.
  *
  * @param {string} token
  */
 function urlDeCheckin(token) {
-  const base = (process.env.NEXT_PUBLIC_APP_URL ?? '').replace(/\/+$/, '');
+  const base = urlDoFront();
   return `${base}/checkin/${token}`;
 }
 
@@ -76,9 +75,8 @@ export async function obterReuniao(usuario, id) {
       status: r.status,
 
       checkin: {
-        // O token é o segredo do QR: quem tem o token registra presença. Só
-        // sai daqui porque esta rota já exige sessão e permissão de ver
-        // reunião — ele nunca vai para uma resposta pública.
+// O token é o segredo do QR: quem o tem registra presença. Só sai daqui porque
+// esta rota já exige sessão e permissão; nunca vai para resposta pública.
         token: r.qr_token,
         url: urlDeCheckin(r.qr_token),
         abreEm: r.checkin_abre_em,

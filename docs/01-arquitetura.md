@@ -58,16 +58,14 @@ banco/
   migrations/001_estrutura_inicial.sql   o banco inteiro, em 10 partes
   seed.sql                               dados de exemplo
 src/
-  app/                    ① apresentação — rotas e telas do Next.js
-    (acesso)/             login, recuperação e redefinição de senha
-    (painel)/             área autenticada
-    api/                  rotas HTTP (check-in, encerramentos)
+  app/                    ① apresentação — só rotas HTTP (sem telas)
+    api/                  as 27 rotas REST
   aplicacao/              ② casos de uso — um arquivo por ação do sistema
     autenticacao/  checkin/  reunioes/  vinculos/
   dominio/                ③ regras — permissoes.js, erros.js, tipos.js
   infraestrutura/         ④ ferramentas
     banco/  seguranca/  email/  http/
-  middleware.js           barreira de cookie antes do painel
+  middleware.js           CORS + barreira de cookie antes das rotas privadas
 testes/
   banco/  dominio/  integracao/
 scripts/                  migrar, resetar, testar, criar usuário

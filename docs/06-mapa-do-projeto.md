@@ -117,24 +117,15 @@ ecossistema-inovacao/
 
 ### src/app/ — ① Apresentação
 
-Rotas do Next.js. Os parênteses (`(acesso)`, `(painel)`) agrupam telas que
-compartilham layout sem virar parte do endereço.
+Rotas HTTP do Next.js — **e nada além disso**. Em 10/09/2026 as telas saíram do
+projeto: a equipe responde só pelo back-end e o front é outro repositório.
+`src/app/` tem uma única pasta, `api/`, e cada `route.js` vira um endereço.
 
 | Arquivo | O que faz |
 |---|---|
-| `layout.jsx` | Moldura de toda página: `<html>`, `<body>`, título do site |
-| `page.jsx` | Raiz `/`: manda para o painel se há sessão, senão para o login |
-| `globals.css` | Estilo base. O visual definitivo vem da trilha de UX/UI |
-| `(acesso)/layout.jsx` | Cartão centralizado das telas de login |
-| `(acesso)/acoes.js` | Server Actions: recebe o formulário e chama o caso de uso. **Só tradução, sem regra** |
-| `(acesso)/formularios.jsx` | Os três formulários (React, roda no navegador) |
-| `(acesso)/login/page.jsx` | Tela de entrar (RF01) |
-| `(acesso)/recuperar-senha/page.jsx` | Pedir link de recuperação (RF02) |
-| `(acesso)/redefinir-senha/page.jsx` | Definir a nova senha (RF02) |
-| `(painel)/layout.jsx` | Menu lateral montado conforme o perfil (RF03) |
-| `(painel)/dashboard/page.jsx` | Indicadores lidos da view `vw_dashboard` |
-| `sem-permissao/page.jsx` | Recusa explicada quando o perfil não permite |
-| `sair/route.js` | Encerra a sessão |
+| `api/sessao/route.js` | POST entra (RF01) · GET quem está logado · DELETE sai |
+| `api/senha/recuperar/route.js` | Pede o link de recuperação (RF02) |
+| `api/senha/redefinir/route.js` | Grava a nova senha (RF02) |
 | `api/checkin/[token]/route.js` | GET dados da reunião · POST registra presença |
 | `api/checkin/[token]/buscar/route.js` | Busca o participante pelo nome |
 | `api/reunioes/[id]/encerrar/route.js` | Encerra a reunião |

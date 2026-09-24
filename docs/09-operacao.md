@@ -140,7 +140,8 @@ alter role app_web login password '<senha>';
 
 ```
 DATABASE_URL=postgresql://app_web:<senha>@<host>:5432/railway
-NEXT_PUBLIC_APP_URL=https://<subdominio>.up.railway.app
+URL_FRONTEND=https://<endereco-do-front>
+COOKIE_CROSS_SITE=1
 ARMAZENAMENTO=postgres
 UPLOAD_LIMITE_BYTES=20971520
 NODE_ENV=production
