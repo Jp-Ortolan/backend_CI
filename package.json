@@ -9,13 +9,16 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "db:migrar": "./scripts/migrar.sh",
+    "db:migrar": "node scripts/migrar.mjs",
+    "db:semear": "node scripts/semear.mjs",
+    "db:senha-app": "node scripts/senha-app-web.mjs",
     "db:resetar": "./scripts/resetar.sh",
     "db:testar": "node scripts/testar-banco.mjs",
     "db:testar:bash": "./scripts/testar-banco.sh",
     "test": "npm run test:dominio && npm run test:integracao",
     "test:dominio": "node --import ./testes/registrar-alias.mjs --test \"testes/dominio/*.test.js\"",
-    "test:integracao": "node --import ./testes/registrar-alias.mjs --test \"testes/integracao/*.test.js\""
+    "test:integracao": "node --import ./testes/registrar-alias.mjs --test \"testes/integracao/*.test.js\"",
+    "db:migrar:bash": "./scripts/migrar.sh"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.1.0",

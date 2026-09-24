@@ -31,3 +31,6 @@ backups/
 
 # lixo temporário
 _to_delete/
+
+# tarball temporário de teste
+*.tgz
