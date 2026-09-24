@@ -4,8 +4,6 @@ Plataforma web do Centro de Inovação de Guarapuava para centralizar a base do
 ecossistema — instituições, representantes, vínculos, reuniões e presenças — e
 automatizar o registro de participação por QR Code.
 
-**Entrega da primeira versão: 30/09/2026.**
-
 ## Stack
 
 | Camada | Tecnologia |
@@ -72,16 +70,10 @@ para `.env.local` (`cp .env.example .env.local`) e suba a aplicação:
 npm run dev                   # http://localhost:3000
 ```
 
-O seed traz três acessos, todos com a senha **`senha123456`**:
-
-| E-mail | Perfil |
-|---|---|
-| `ana@centroinovacao.br` | Administrador |
-| `carla@centroinovacao.br` | Gestor |
-| `bruno@centroinovacao.br` | Consulta |
-
-Entre com cada um (`POST /api/sessao`) para ver o `menu` da resposta mudar — é a
-matriz de permissões funcionando.
+O seed cria um acesso de cada perfil — administrador, gestor e consulta. Os
+e-mails e a senha estão em [`banco/seed.sql`](banco/seed.sql); valem só em banco
+local. Entre com cada um (`POST /api/sessao`) para ver o `menu` da resposta
+mudar — é a matriz de permissões funcionando.
 
 > **Este projeto é só back-end.** Não há telas: `src/app/` tem apenas `api/`.
 > O front-end é outro projeto e consome estas rotas por HTTP. Como entrar,
@@ -234,22 +226,6 @@ Há um teste que existe só para provar que a conexão da aplicação não virou
 dono por descuido: *"sem usuário declarado, a aplicação não enxerga instituição"*.
 Se ele passar a falhar, todos os testes de permissão do projeto estão passando
 sem testar nada.
-
-## As quatro regras do modelo
-
-Valem para qualquer código que toque o banco:
-
-1. **Representante é vínculo, não pessoa.** A pessoa existe sozinha; o que a liga
-   a uma instituição é a tabela `vinculo`, com período. Encerrar vínculo nunca
-   apaga linha.
-2. **Presença é snapshot.** No check-in grava-se `vinculo_id`, `instituicao_id` e
-   `cargo_no_momento`. Nunca deduza a instituição de uma presença antiga pelo
-   vínculo atual.
-3. **Indicador não se armazena.** Percentual e totais saem das views `vw_*`.
-4. **Convidado não tem vínculo.** O banco recusa — a aplicação não deve tentar.
-
-A regra 2 é a menos óbvia e a mais cara de corrigir depois: sem ela, cada troca
-de instituição reescreve o histórico das reuniões passadas.
 
 ## A linguagem do projeto
 
