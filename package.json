@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "description": "Sistema de Gestão do Ecossistema de Inovação — Centro de Inovação",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

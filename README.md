@@ -8,7 +8,7 @@ automatizar o registro de participação por QR Code.
 
 | Camada | Tecnologia |
 |---|---|
-| Runtime | Node.js 20+ |
+| Runtime | Node.js 22+ |
 | Framework | Next.js 14 (App Router) |
 | Linguagem | JavaScript + JSDoc (sem TypeScript) |
 | Banco de dados | PostgreSQL 15+ |
@@ -34,7 +34,9 @@ automatizar o registro de participação por QR Code.
 
 ## Começar aqui
 
-Precisa de **Node 20+** e de um **PostgreSQL 15+** (na máquina ou em Docker).
+Precisa de **Node 22+** e de um **PostgreSQL 15+** (na máquina ou em Docker).
+O 22 é o mínimo porque `node --test` só entende curinga (`*.test.js`) a partir
+dele — no 20 os testes não são encontrados.
 
 ```bash
 git clone https://github.com/Jp-Ortolan/backend_CI.git
