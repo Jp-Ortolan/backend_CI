@@ -80,6 +80,45 @@ Os nomes que você usa hoje no `data.js` e os que a API espera:
 Os três que mais tropeçam: **`type` e `area` viram id numérico**, e **`status` é
 minúsculo**. `"Ativa"` é recusado; `"ativa"` passa.
 
+## De-para — representante
+
+Nomes do `ManagementPages.jsx` (revisão de 24/09):
+
+| No seu código | Na API | Observação |
+|---|---|---|
+| `name` | `nome` | |
+| `email` | `email` | |
+| `cpf` | `cpf` | pode ir com pontuação |
+| `phone` | `telefone` | |
+| `institutionId` | `vinculo.instituicaoId` | **dentro do objeto `vinculo`**, e é o UUID da instituição |
+| `role` | `vinculo.cargo` | idem |
+| `status` `"Ativo"`/`"Inativo"` | o vínculo tem `ativo`/`encerrado` | minúsculo; para inativar use `POST /vinculos/:id/encerrar`, que grava a data de fim em vez de apagar |
+
+**Endereço do representante não existe no banco.** O seu formulário coleta
+`street`, `number`, `neighborhood`, `city`, `state`, `zip` e `complement`, mas
+o Figma não pede nenhum deles e a tabela `pessoa` não tem essas colunas —
+endereço hoje é só da instituição. Manda sem eles que a API ignora; se a tela
+precisa mesmo guardar, fala com o João Pedro que é uma migration pequena.
+
+## De-para — reunião
+
+| No seu código | Na API | Observação |
+|---|---|---|
+| `name` | `titulo` | **atenção:** aqui `name` é o título, não o nome de uma pessoa |
+| `date` | `data` | `AAAA-MM-DD` |
+| `time` | `horaInicio` | `HH:MM`. Há também `horaFim` |
+| `place` | `local` | a sala: "Auditório" |
+| `address` | `endereco` | o prédio: "Prefeitura de Guarapuava" |
+| `description` | `descricao` | |
+| `link` | `link` | precisa começar com `https://` |
+| `password` | `senhaAcesso` | |
+| `status` `"Agendada"` | `agendada` | minúsculo. Também `realizada` e `cancelada` |
+| `count` | `confirmados` | vem calculado pela API; não mande |
+| `organizer` | — | não existe no banco; quem criou fica em `criadoPor` |
+
+Na criação, `convidarTodos: true` já convida todos os representantes com
+vínculo vigente — é o que o Figma mostra com "115 confirmados".
+
 ## Endpoints por tela
 
 ### Login e senha
