@@ -22,7 +22,7 @@ Abra o serviço Postgres → aba **Variables** → copie a `DATABASE_PUBLIC_URL`
 No PowerShell, dentro da pasta do projeto:
 
 ```powershell
-$env:DATABASE_URL_ADMIN = "<cole a DATABASE_PUBLIC_URL aqui>"
+$env:DATABASE_URL_ADMIN = "postgresql://postgres:SENHA@junction.proxy.rlwy.net:PORTA/railway"
 npm run db:migrar
 ```
 
