@@ -928,3 +928,46 @@ Com front e API sob o mesmo domínio, deixe desligado: `lax` é mais seguro.
 URL_FRONTEND=https://front.exemplo.br   # origem liberada no CORS, base do QR e do link de senha
 COOKIE_CROSS_SITE=0                     # 1 só quando front e API ficam em domínios diferentes
 ```
+
+---
+
+# Campos acrescentados em 24/09/2026 (migration 006)
+
+Vieram da conferência do arquivo do Figma contra o banco: os três estavam no
+formulário e não existiam.
+
+## `cpf` — representante
+
+`POST /api/representantes` e `PATCH /api/representantes/:id` aceitam `cpf`.
+Pode vir com pontuação; é gravado só com os dígitos. O dígito verificador é
+conferido (`src/dominio/cpf.js`), e o CPF não se repete entre pessoas.
+
+Opcional na API, obrigatório na tela: as pessoas já cadastradas não têm CPF, e
+exigir agora quebraria o que existe.
+
+Recusa devolve o formato de sempre:
+
+```json
+{ "erro": { "codigo": "DADOS_INVALIDOS", "mensagem": "CPF inválido.",
+            "campos": [ { "campo": "cpf", "mensagem": "CPF inválido." } ] } }
+```
+
+`cpf` passa a vir em `GET /api/representantes` e `GET /api/representantes/:id`.
+
+## `link` e `senhaAcesso` — reunião
+
+Para reunião on-line. Aceitos em `POST /api/reunioes` e `PATCH /api/reunioes/:id`,
+devolvidos em `GET /api/reunioes/:id`.
+
+`link` precisa começar com `http://` ou `https://`. `senhaAcesso` é a senha da
+sala (Meet, Zoom, Teams) — não é credencial de acesso ao sistema, por isso viaja
+como texto.
+
+**As duas não aparecem em nenhuma rota pública.** O check-in lê a reunião por
+`checkin_reuniao()`, que tem lista fixa de colunas; há um teste de banco que
+falha se alguém acrescentar `link` ou `senha` ali.
+
+## Tipos de instituição
+
+`GET /api/dominios` passa a trazer **Faculdade** e **Centro de inovação**, que
+o select do Figma mostra e o seed não tinha.
