@@ -1,0 +1,68 @@
+name: Backup do banco
+
+# Dump diário do banco de produção, guardado como artefato do Actions.
+# Enquanto o segredo DATABASE_URL_ADMIN_PROD não existir, o job encerra sem erro —
+# assim o quadro de status não fica vermelho antes do Railway existir.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 03:00 em Brasília
+  workflow_dispatch:       # permite rodar na mão, antes de uma migration
+
+jobs:
+  dump:
+    name: pg_dump da produção
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: O segredo está configurado?
+        id: segredo
+        env:
+          URL: ${{ secrets.DATABASE_URL_ADMIN_PROD }}
+        run: |
+          if [ -n "$URL" ]; then
+            echo "tem=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "tem=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::DATABASE_URL_ADMIN_PROD ainda não foi cadastrado — nada a fazer."
+          fi
+
+      # A versão do cliente precisa acompanhar a do servidor: um pg_dump 15
+      # recusa dump de um servidor 16.
+      - name: Instalar o pg_dump 16
+        if: steps.segredo.outputs.tem == 'true'
+        run: |
+          sudo sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg
+          sudo sed -i 's|deb |deb [signed-by=/usr/share/keyrings/pgdg.gpg] |' /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-16
+
+      # -Fc é o formato comprimido do Postgres: restaura com pg_restore e
+      # permite restaurar uma tabela só. O .sql puro obriga tudo ou nada.
+      - name: Gerar o dump
+        if: steps.segredo.outputs.tem == 'true'
+        env:
+          DATABASE_URL_ADMIN_PROD: ${{ secrets.DATABASE_URL_ADMIN_PROD }}
+        run: |
+          set -o pipefail
+          nome="ecossistema-$(date -u +%Y%m%d-%H%M).dump"
+          pg_dump --no-owner --no-privileges -Fc -f "$nome" "$DATABASE_URL_ADMIN_PROD"
+          ls -lh "$nome"
+          # Dump de banco vazio tem alguns KB. Abaixo disso algo deu errado em
+          # silêncio, e um backup vazio é pior que backup nenhum.
+          if [ "$(stat -c%s "$nome")" -lt 4096 ]; then
+            echo "::error::dump de $(stat -c%s "$nome") bytes — pequeno demais para ser real"
+            exit 1
+          fi
+          echo "NOME_DUMP=$nome" >> "$GITHUB_ENV"
+
+      - name: Guardar o dump
+        if: steps.segredo.outputs.tem == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.NOME_DUMP }}
+          path: ${{ env.NOME_DUMP }}
+          retention-days: 30
+          if-no-files-found: error

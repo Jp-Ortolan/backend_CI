@@ -78,8 +78,9 @@ Actions → Backup do banco → Run workflow, o que vale fazer **antes de aplica
 migration em produção**.
 
 Precisa do secret `DATABASE_URL_ADMIN_PROD` em
-Settings → Secrets and variables → Actions. Sem ele o workflow falha com
-mensagem explicando, em vez de gerar um arquivo vazio em silêncio.
+Settings → Secrets and variables → Actions. Sem ele o workflow encerra sem
+erro e avisa no log — nada de quadro vermelho antes de o Railway existir. Com
+ele, um dump menor que 4 KB derruba o job: backup vazio é pior que nenhum.
 
 ### À mão
 

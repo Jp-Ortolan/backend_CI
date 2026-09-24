@@ -7,9 +7,9 @@ name: Banco de dados
 on:
   push:
     branches: [main, develop]
-    paths: ['banco/**', 'testes/**', 'scripts/**', '.github/workflows/banco.yml']
+    paths: ['banco/**', 'testes/**', 'scripts/**', 'src/**', '.github/workflows/banco.yml']
   pull_request:
-    paths: ['banco/**', 'testes/**', 'scripts/**', '.github/workflows/banco.yml']
+    paths: ['banco/**', 'testes/**', 'scripts/**', 'src/**', '.github/workflows/banco.yml']
 
 jobs:
   migrations-e-testes:
@@ -32,28 +32,44 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Instalar o cliente do Postgres
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client
-
-      - name: Aplicar migrations, seed e rodar os testes
-        env:
-          PGHOST: localhost
-          PGPORT: '5432'
-          PGUSER: postgres
-          PGPASSWORD: postgres
-          BANCO: ecossistema_ci
-        run: ./scripts/testar-banco.sh
-
       - uses: actions/setup-node@v4
         with: { node-version: '20', cache: npm }
       - run: npm ci
-      - name: Testes de integração da autenticação
+
+      # O runner em Node dispensa o psql e já deixa o app_web com senha.
+      - name: Migrations, seed e os testes SQL
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ecossistema_ci
-        run: npm run test:integracao
+          DATABASE_URL_ADMIN: postgresql://postgres:postgres@localhost:5432/postgres
+          BANCO: ecossistema_ci
+          SENHA_APP_WEB: app_web
+        run: npm run db:testar
+
+      # DATABASE_URL precisa ser a do app_web, que NÃO é dono das tabelas: como
+      # dono, o RLS é ignorado e os testes de permissão passam sem testar nada.
+      - name: Testes de integração
+        env:
+          DATABASE_URL: postgresql://app_web:app_web@localhost:5432/ecossistema_ci
+          DATABASE_URL_ADMIN: postgresql://postgres:postgres@localhost:5432/ecossistema_ci
+        shell: bash
+        run: |
+          set -o pipefail
+          npm run test:integracao 2>&1 | tee saida-integracao.txt
+
+      # Faltando uma das duas URLs, cada arquivo se pula sozinho e o CI fica
+      # verde sem ter rodado nada. Já aconteceu: falhar é melhor que passar.
+      - name: Os testes de integração rodaram mesmo?
+        run: |
+          pularam=$(grep -oP '^# skipped \K[0-9]+' saida-integracao.txt | head -1)
+          passaram=$(grep -oP '^# pass \K[0-9]+' saida-integracao.txt | head -1)
+          echo "passaram=$passaram pularam=$pularam"
+          if [ "${pularam:-0}" -gt 0 ]; then
+            echo "::error::$pularam teste(s) de integração pulados — confira DATABASE_URL e DATABASE_URL_ADMIN"
+            exit 1
+          fi
+          if [ "${passaram:-0}" -lt 90 ]; then
+            echo "::error::só $passaram testes de integração rodaram; o esperado é 96"
+            exit 1
+          fi
 
   migracoes-idempotentes:
     name: Migrations rodam duas vezes sem quebrar
