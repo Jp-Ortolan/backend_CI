@@ -40,6 +40,12 @@ const objetoReuniao = z.object({
   local: opcional(200),
   endereco: opcional(300),
 
+  // Reunião on-line. A senha é a da sala (Meet/Zoom), não credencial de acesso
+  // ao sistema — por isso viaja como texto comum.
+  link: z.string().trim().url('Informe um link válido, começando com https://')
+    .max(500).optional().or(z.literal('')).transform((v) => (v || null)),
+  senhaAcesso: opcional(100),
+
   // Janela do QR Code. Sem ela vale o dia inteiro da reunião — assim uma
   // reunião cadastrada às pressas não fica com o check-in travado.
   checkinAbreEm: instante,
@@ -109,6 +115,8 @@ export function paraColunasReuniao(d) {
     horaFim: ['hora_fim', d.horaFim],
     local: ['local', d.local],
     endereco: ['endereco', d.endereco],
+    link: ['link', d.link],
+    senhaAcesso: ['senha_acesso', d.senhaAcesso],
     checkinAbreEm: ['checkin_abre_em', d.checkinAbreEm],
     checkinFechaEm: ['checkin_fecha_em', d.checkinFechaEm],
   };

@@ -11,11 +11,17 @@ import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
+import { cpfValido, apenasDigitos } from '@/dominio/cpf.js';
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
 
 export const esquemaRepresentante = z.object({
   nome: z.string().trim().min(3, 'Informe o nome completo.').max(200),
+
+  // Opcional na API, obrigatório na tela: as pessoas já cadastradas não têm CPF.
+  cpf: z.string().trim().optional().or(z.literal(''))
+    .transform((v) => (v ? apenasDigitos(v) : null))
+    .refine((v) => v === null || cpfValido(v), 'CPF inválido.'),
   email: z.string().trim().email('E-mail inválido.').optional()
     .or(z.literal('')).transform((v) => (v ? v.toLowerCase() : null)),
   telefone: z.string().trim().max(20).optional()
@@ -56,10 +62,10 @@ export async function criarRepresentante(usuario, entrada) {
     if (!pessoa) {
       try {
         pessoa = await tx.consultaUm(
-          `insert into pessoa (nome, email, telefone, observacoes)
-                values ($1, $2, $3, $4)
+          `insert into pessoa (nome, email, telefone, observacoes, cpf)
+                values ($1, $2, $3, $4, $5)
              returning id, nome`,
-          [dados.nome, dados.email, dados.telefone, dados.observacoes],
+          [dados.nome, dados.email, dados.telefone, dados.observacoes, dados.cpf],
         );
       } catch (e) {
         traduzirErroDoBanco(e);

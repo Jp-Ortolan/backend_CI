@@ -72,6 +72,8 @@ export async function obterReuniao(usuario, id) {
       horaFim: r.hora_fim,
       local: r.local,
       endereco: r.endereco,
+      link: r.link,
+      senhaAcesso: r.senha_acesso,
       status: r.status,
 
       checkin: {

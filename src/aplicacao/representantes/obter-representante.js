@@ -18,7 +18,7 @@ export async function obterRepresentante(usuario, id) {
 
   return comUsuario(u.id, async (tx) => {
     const p = await tx.consultaUm(
-      'select id, nome, email, telefone, observacoes, created_at, updated_at from pessoa where id = $1',
+      'select id, nome, email, telefone, cpf, observacoes, created_at, updated_at from pessoa where id = $1',
       [id],
     );
     if (!p) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Representante não encontrado.');
@@ -75,6 +75,7 @@ export async function obterRepresentante(usuario, id) {
     return {
       id: p.id,
       nome: p.nome,
+      cpf: p.cpf,
       email: p.email,
       telefone: p.telefone,
       observacoes: p.observacoes,

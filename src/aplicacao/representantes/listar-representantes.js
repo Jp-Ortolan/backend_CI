@@ -64,7 +64,7 @@ export async function listarRepresentantes(usuario, filtros) {
 
   return comUsuario(u.id, async (tx) => {
     const linhas = await tx.consulta(
-      `select p.id, p.nome, p.email, p.telefone, p.created_at,
+      `select p.id, p.nome, p.email, p.telefone, p.cpf, p.created_at,
               count(*) over() as total_geral,
               -- Os vínculos vêm agregados em JSON: uma consulta só, e a tela
               -- recebe a pessoa já com o histórico dela dentro.
@@ -97,6 +97,7 @@ export async function listarRepresentantes(usuario, filtros) {
         nome: l.nome,
         email: l.email,
         telefone: l.telefone,
+        cpf: l.cpf,
         criadoEm: l.created_at,
         vinculos: l.vinculos,
         vinculoAtual: l.vinculos.find(

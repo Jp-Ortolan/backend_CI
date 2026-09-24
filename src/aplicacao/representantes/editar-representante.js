@@ -11,6 +11,7 @@ import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
+import { cpfValido, apenasDigitos } from '@/dominio/cpf.js';
 
 /**
  * A ordem de .optional() e .transform() importa.
@@ -25,6 +26,9 @@ const objetoRepresentante = z.object({
   email: z.string().trim().email('E-mail inválido.')
     .or(z.literal('')).transform((v) => (v ? v.toLowerCase() : null)),
   telefone: z.string().trim().max(20).transform((v) => (v || null)),
+  cpf: z.string().trim().or(z.literal(''))
+    .transform((v) => (v ? apenasDigitos(v) : null))
+    .refine((v) => v === null || cpfValido(v), 'CPF inválido.'),
   observacoes: z.string().trim().max(2000).transform((v) => (v || null)),
 });
 
@@ -44,6 +48,7 @@ export async function editarRepresentante(usuario, id, entrada) {
   if ('nome' in dados) colunas.nome = dados.nome;
   if ('email' in dados) colunas.email = dados.email;
   if ('telefone' in dados) colunas.telefone = dados.telefone;
+  if ('cpf' in dados) colunas.cpf = dados.cpf;
   if ('observacoes' in dados) colunas.observacoes = dados.observacoes;
 
   if (Object.keys(colunas).length === 0) {
