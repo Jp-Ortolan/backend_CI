@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
-import { urlDoFront } from '@/infraestrutura/http/front.js';
+import { origemLiberada } from '@/infraestrutura/http/front.js';
 
 /**
  * Duas coisas antes de qualquer rota: CORS e a conferência do cookie.
  *
  * CORS existe porque o front é outro projeto, em outro endereço — sem estes
- * cabeçalhos o navegador nem entrega a resposta a ele. Só a origem configurada
- * em URL_FRONTEND é liberada, e com credenciais, para o cookie de sessão viajar.
+ * cabeçalhos o navegador nem entrega a resposta a ele. Só as origens listadas
+ * em URL_FRONTEND passam, e com credenciais, para o cookie de sessão viajar.
  *
  * O cookie é só conferido pela PRESENÇA: no Edge não há conexão com o Postgres.
  * A validade é checada no servidor, em usuarioAtual() — cookie forjado passa
@@ -40,8 +40,7 @@ function comCors(resposta, origem) {
  * @param {import('next/server').NextRequest} req
  */
 export function middleware(req) {
-  const front = urlDoFront();
-  const origem = req.headers.get('origin') === front ? front : '';
+  const origem = origemLiberada(req.headers.get('origin'));
 
   // Preflight: o navegador pergunta antes de mandar POST/PATCH/DELETE com cookie.
   if (req.method === 'OPTIONS') {
