@@ -1,75 +1,108 @@
 /**
- * Testes da matriz de permissões (RF03).
+ * Testes da matriz de permissões (RF03), revista para os perfis do Fórum.
  *
- * O que estes testes protegem: a regra de que gestor opera mas não apaga, e
- * que consulta não escreve nada. Quebrar isso em silêncio é o caminho mais
- * curto para alguém apagar um vínculo e levar o histórico de participação junto.
+ * O que estes testes protegem: a tabela "Estrutura de acessos recomendada" da
+ * revisão de outubro. Admin faz tudo; Diretoria opera e aprova mas não exclui
+ * nem mexe em contas; representante consulta, cuida da própria instituição e
+ * PEDE o resto.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import { pode, acoesDe, menuDoPapel, ROTULO_PAPEL } from '../../src/dominio/permissoes.js';
+import {
+  pode, acoesDe, menuDoPapel, permissoesDe, ehGestao, escopoDe, ROTULO_PAPEL,
+} from '../../src/dominio/permissoes.js';
 
-test('admin pode tudo sobre instituição', () => {
-  for (const a of ['ver', 'criar', 'editar', 'encerrar', 'excluir', 'exportar']) {
+test('admin pode tudo sobre instituição, inclusive excluir e aprovar', () => {
+  for (const a of ['ver', 'criar', 'editar', 'encerrar', 'excluir', 'exportar', 'aprovar']) {
     assert.equal(pode('admin', 'instituicao', a), true, `admin deveria poder ${a}`);
   }
 });
 
-test('gestor opera mas não exclui', () => {
-  assert.equal(pode('gestor', 'instituicao', 'criar'), true);
-  assert.equal(pode('gestor', 'instituicao', 'editar'), true);
-  assert.equal(pode('gestor', 'reuniao', 'encerrar'), true);
-  assert.equal(pode('gestor', 'instituicao', 'excluir'), false);
-  assert.equal(pode('gestor', 'vinculo', 'excluir'), false);
+test('só o admin gerencia contas e permissões', () => {
+  assert.equal(pode('admin', 'usuario', 'criar'), true);
+  assert.equal(pode('diretoria', 'usuario', 'ver'), false);
+  assert.equal(pode('representante', 'usuario', 'ver'), false);
 });
 
-test('gestor não administra usuários', () => {
-  assert.equal(pode('gestor', 'usuario', 'ver'), false);
-  assert.equal(pode('gestor', 'usuario', 'criar'), false);
+test('diretoria cria reuniões e eventos, aprova e corrige presença', () => {
+  assert.equal(pode('diretoria', 'reuniao', 'criar'), true);
+  assert.equal(pode('diretoria', 'evento', 'criar'), true);
+  assert.equal(pode('diretoria', 'solicitacao', 'aprovar'), true);
+  assert.equal(pode('diretoria', 'instituicao', 'aprovar'), true);
+  assert.equal(pode('diretoria', 'presenca', 'editar'), true);
 });
 
-test('consulta só lê', () => {
-  assert.equal(pode('leitura', 'instituicao', 'ver'), true);
-  for (const a of ['criar', 'editar', 'encerrar', 'excluir', 'exportar']) {
-    assert.equal(pode('leitura', 'instituicao', a), false, `leitura não deveria poder ${a}`);
+test('diretoria não exclui definitivamente', () => {
+  for (const r of ['instituicao', 'vinculo', 'reuniao', 'evento', 'documento']) {
+    assert.equal(pode('diretoria', r, 'excluir'), false, `diretoria não deveria excluir ${r}`);
   }
 });
 
-test('consulta não enxerga usuários', () => {
-  assert.equal(pode('leitura', 'usuario', 'ver'), false);
+test('representante não cria reunião nem evento, não aprova, não corrige presença', () => {
+  assert.equal(pode('representante', 'reuniao', 'criar'), false);
+  assert.equal(pode('representante', 'evento', 'editar'), false);
+  assert.equal(pode('representante', 'solicitacao', 'aprovar'), false);
+  assert.equal(pode('representante', 'instituicao', 'aprovar'), false);
+  assert.equal(pode('representante', 'presenca', 'editar'), false);
+});
+
+test('representante edita a própria instituição, anexa documento e abre solicitação', () => {
+  assert.equal(pode('representante', 'instituicao', 'editar'), true);
+  assert.equal(pode('representante', 'documento', 'criar'), true);
+  assert.equal(pode('representante', 'solicitacao', 'criar'), true);
+  assert.equal(pode('representante', 'relatorio', 'exportar'), true);
+  assert.equal(pode('representante', 'instituicao', 'excluir'), false);
 });
 
 test('sem papel não pode nada', () => {
   assert.equal(pode(null, 'instituicao', 'ver'), false);
   assert.equal(pode(undefined, 'indicador', 'ver'), false);
+  assert.equal(pode(/** @type {any} */ ('gestor'), 'instituicao', 'ver'), false,
+    'papel antigo não pode continuar valendo');
 });
 
-test('menu do gestor esconde Usuários', () => {
-  const itens = menuDoPapel('gestor').map(i => i.rotulo);
-  assert.ok(itens.includes('Instituições'));
-  assert.ok(itens.includes('Reuniões'));
-  assert.equal(itens.includes('Usuários'), false);
+test('os três perfis enxergam menus DIFERENTES', () => {
+  const admin = menuDoPapel('admin').map((i) => i.href);
+  const diretoria = menuDoPapel('diretoria').map((i) => i.href);
+  const repr = menuDoPapel('representante').map((i) => i.href);
+
+  assert.ok(admin.includes('/usuarios'));
+  assert.equal(diretoria.includes('/usuarios'), false);
+  assert.ok(diretoria.includes('/solicitacoes'));
+  assert.ok(repr.includes('/minha-instituicao'));
+  assert.equal(repr.includes('/representantes'), false);
+  assert.equal(repr.includes('/relatorios'), false);
+  assert.notDeepEqual(admin, diretoria);
+  assert.notDeepEqual(diretoria, repr);
 });
 
-test('menu do admin inclui Usuários', () => {
-  assert.ok(menuDoPapel('admin').map(i => i.rotulo).includes('Usuários'));
+test('reuniões e eventos são itens separados no menu', () => {
+  for (const p of /** @type {const} */ (['admin', 'diretoria', 'representante'])) {
+    const itens = menuDoPapel(p).map((i) => i.href);
+    assert.ok(itens.includes('/reunioes') && itens.includes('/eventos'), p);
+  }
 });
 
-test('menu da consulta é só leitura, sem Usuários', () => {
-  const itens = menuDoPapel('leitura').map(i => i.rotulo);
-  assert.equal(itens.includes('Usuários'), false);
-  assert.ok(itens.includes('Dashboard'));
+test('escopo: gestão vê tudo, representante só a instituição', () => {
+  assert.equal(ehGestao('admin'), true);
+  assert.equal(ehGestao('diretoria'), true);
+  assert.equal(ehGestao('representante'), false);
+  assert.equal(escopoDe('diretoria'), 'tudo');
+  assert.equal(escopoDe('representante'), 'instituicao');
 });
 
-test('acoesDe devolve cópia — mutar não contamina a matriz', () => {
-  const a = acoesDe('leitura', 'instituicao');
+test('acoesDe e permissoesDe devolvem cópia — mutar não contamina a matriz', () => {
+  const a = acoesDe('representante', 'instituicao');
   a.push('excluir');
-  assert.equal(pode('leitura', 'instituicao', 'excluir'), false);
+  const m = permissoesDe('representante');
+  m.instituicao.push('aprovar');
+  assert.equal(pode('representante', 'instituicao', 'excluir'), false);
+  assert.equal(pode('representante', 'instituicao', 'aprovar'), false);
 });
 
 test('todo papel tem rótulo de exibição', () => {
-  for (const p of ['admin', 'gestor', 'leitura']) {
+  for (const p of ['admin', 'diretoria', 'representante']) {
     assert.ok(ROTULO_PAPEL[p] && ROTULO_PAPEL[p].length > 0);
   }
 });

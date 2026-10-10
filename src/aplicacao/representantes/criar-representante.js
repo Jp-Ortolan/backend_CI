@@ -27,6 +27,7 @@ export const esquemaRepresentante = z.object({
   telefone: z.string().trim().max(20).optional()
     .transform((v) => (v || null)),
   observacoes: z.string().trim().max(2000).optional().transform((v) => (v || null)),
+  autorizaComunicacao: z.boolean().optional().default(false),
 
   // O vínculo é opcional na API para permitir cadastrar a pessoa antes de saber
   // a instituição, mas a tela deve enviar sempre.
@@ -34,6 +35,12 @@ export const esquemaRepresentante = z.object({
     instituicaoId: z.string().uuid('Selecione a instituição.'),
     cargo: z.string().trim().max(120).optional().transform((v) => (v || null)),
     dataInicio: z.string().regex(DATA, 'Informe a data de início (AAAA-MM-DD).').optional(),
+    tipoRepresentacao: z.enum(['titular', 'suplente', 'integrante', 'convidado'], {
+      errorMap: () => ({ message: 'Tipo inválido: titular, suplente, integrante ou convidado.' }),
+    }).optional().default('integrante'),
+    cargoForum: z.string().trim().max(120).optional().transform((v) => (v || null)),
+    oficioDocumentoId: z.string().uuid().optional(),
+    grupoTrabalhoIds: z.array(z.coerce.number().int().positive()).max(30).optional(),
   }).optional(),
 });
 
@@ -62,10 +69,11 @@ export async function criarRepresentante(usuario, entrada) {
     if (!pessoa) {
       try {
         pessoa = await tx.consultaUm(
-          `insert into pessoa (nome, email, telefone, observacoes, cpf)
-                values ($1, $2, $3, $4, $5)
+          `insert into pessoa (nome, email, telefone, observacoes, cpf, autoriza_comunicacao)
+                values ($1, $2, $3, $4, $5, $6)
              returning id, nome`,
-          [dados.nome, dados.email, dados.telefone, dados.observacoes, dados.cpf],
+          [dados.nome, dados.email, dados.telefone, dados.observacoes, dados.cpf,
+            dados.autorizaComunicacao],
         );
       } catch (e) {
         traduzirErroDoBanco(e);
@@ -85,11 +93,22 @@ export async function criarRepresentante(usuario, entrada) {
     let vinculo;
     try {
       vinculo = await tx.consultaUm(
-        `insert into vinculo (pessoa_id, instituicao_id, cargo, data_inicio)
-              values ($1, $2, $3, $4)
-           returning id, instituicao_id, cargo, status, data_inicio`,
-        [pessoa.id, dados.vinculo.instituicaoId, dados.vinculo.cargo, inicio],
+        `insert into vinculo (pessoa_id, instituicao_id, cargo, data_inicio,
+                              tipo_representacao, cargo_forum, oficio_documento_id)
+              values ($1, $2, $3, $4, $5, $6, $7)
+           returning id, instituicao_id, cargo, status, data_inicio,
+                     tipo_representacao, cargo_forum`,
+        [pessoa.id, dados.vinculo.instituicaoId, dados.vinculo.cargo, inicio,
+          dados.vinculo.tipoRepresentacao, dados.vinculo.cargoForum,
+          dados.vinculo.oficioDocumentoId ?? null],
       );
+      if (vinculo && dados.vinculo.grupoTrabalhoIds?.length) {
+        await tx.consulta(
+          `insert into vinculo_grupo_trabalho (vinculo_id, grupo_trabalho_id)
+           select $1, unnest($2::smallint[]) on conflict do nothing`,
+          [vinculo.id, dados.vinculo.grupoTrabalhoIds],
+        );
+      }
     } catch (e) {
       // vinculo_ativo_unico: a pessoa já representa essa instituição.
       // 23503 (foreign key): a instituição informada não existe.
@@ -111,6 +130,8 @@ export async function criarRepresentante(usuario, entrada) {
         id: vinculo.id,
         instituicaoId: vinculo.instituicao_id,
         cargo: vinculo.cargo,
+        cargoForum: vinculo.cargo_forum,
+        tipoRepresentacao: vinculo.tipo_representacao,
         status: vinculo.status,
         dataInicio: vinculo.data_inicio,
       },

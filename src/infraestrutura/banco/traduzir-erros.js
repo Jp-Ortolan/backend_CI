@@ -39,6 +39,20 @@ const MAPA = {
   INSTITUICAO_COM_DOCUMENTO: ['INSTITUICAO_COM_DOCUMENTO',
     'Esta instituição tem documentos anexados. Remova os documentos antes, '
     + 'ou desative a instituição.'],
+
+  // ------------------------------------------ migrations 008 a 010 (outubro)
+  // Levantados pelas guardas que impedem o representante de mudar o que é
+  // decisão da Diretoria, mesmo que a aplicação deixe passar.
+  ALTERACAO_EXIGE_APROVACAO: ['ALTERACAO_EXIGE_APROVACAO',
+    'Esta alteração precisa ser aprovada pela Diretoria. Abra uma solicitação.'],
+  SEM_PERMISSAO_CONTA: ['SEM_PERMISSAO',
+    'Perfil, instituição e situação da conta são definidos pelo administrador.'],
+  CONVIDADO_NAO_PERMITIDO: ['CONVIDADO_NAO_PERMITIDO',
+    'Esta atividade não aceita registro de convidados. Procure a organização.'],
+  LIMITE_ATINGIDO: ['LIMITE_ATINGIDO',
+    'O limite de participantes desta atividade já foi atingido.'],
+  MODO_INVALIDO: ['DADOS_INVALIDOS',
+    'Modo de participação inválido para esta atividade.'],
 };
 
 /**
@@ -84,6 +98,31 @@ const RESTRICOES = {
     'O link precisa começar com http:// ou https://.'],
   documento_storage_path_key: ['DADOS_INVALIDOS',
     'Já existe um documento gravado neste caminho.'],
+
+  // ------------------------------------------ migrations 008 a 011 (outubro)
+  vinculo_titular_unico: ['REPRESENTACAO_DUPLICADA',
+    'Esta instituição já tem um titular vigente. Encerre o atual ou use a troca de titular.'],
+  vinculo_suplente_unico: ['REPRESENTACAO_DUPLICADA',
+    'Esta instituição já tem um suplente vigente. Encerre o atual ou use a troca de suplente.'],
+  usuario_pessoa_unica: ['DADOS_INVALIDOS',
+    'Esta pessoa já tem um acesso ao sistema.'],
+  reuniao_numero_por_tipo: ['NUMERO_DUPLICADO',
+    'Já existe uma atividade deste tipo com este número.'],
+  instituicao_desligada_tem_saida: ['DATA_SAIDA_OBRIGATORIA',
+    'Para desligar a instituição é preciso informar a data de saída.'],
+  instituicao_nao_substitui_a_si: ['DADOS_INVALIDOS',
+    'A instituição não pode ser a própria substituta.'],
+  reuniao_inscricao_http: ['DADOS_INVALIDOS',
+    'O link de inscrição precisa começar com http:// ou https://.'],
+  reuniao_limite_positivo: ['DADOS_INVALIDOS',
+    'O limite de participantes precisa ser maior que zero.'],
+  encaminhamento_concluido_tem_data: ['DADOS_INVALIDOS',
+    'Informe a data de conclusão do encaminhamento.'],
+  documento_versao_positiva: ['DADOS_INVALIDOS', 'Versão inválida.'],
+  configuracao_pkey: ['DADOS_INVALIDOS', 'Configuração já existe.'],
+  vertente_nome_key: ['DADOS_INVALIDOS', 'Já existe uma vertente com este nome.'],
+  grupo_trabalho_nome_key: ['DADOS_INVALIDOS', 'Já existe um GT com este nome.'],
+  tipo_atividade_nome_key: ['DADOS_INVALIDOS', 'Já existe um tipo de atividade com este nome.'],
 };
 
 /**

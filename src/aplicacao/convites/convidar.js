@@ -15,8 +15,12 @@ import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
 
 export const esquemaConvite = z.object({
-  // Sem vinculoIds, convida todo mundo que está ativo.
+  // Sem vinculoIds nem instituicaoIds, convida todo mundo que está ativo.
   vinculoIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+  // "Instituições convocadas": todos os representantes ativos delas. Com
+  // apenasTitulares, só titular e suplente (reunião de diretoria, por exemplo).
+  instituicaoIds: z.array(z.string().uuid()).min(1).max(500).optional(),
+  apenasTitulares: z.boolean().optional().default(false),
 });
 
 /**
@@ -26,7 +30,7 @@ export const esquemaConvite = z.object({
  */
 export async function convidar(usuario, reuniaoId, entrada) {
   const u = exigir(usuario, 'presenca', 'criar');
-  const { vinculoIds } = validar(esquemaConvite, entrada ?? {});
+  const { vinculoIds, instituicaoIds, apenasTitulares } = validar(esquemaConvite, entrada ?? {});
 
   return comUsuario(u.id, async (tx) => {
     const r = await tx.consultaUm(
@@ -44,7 +48,28 @@ export async function convidar(usuario, reuniaoId, entrada) {
 
     let inseridos = 0;
 
-    if (!vinculoIds) {
+    if (instituicaoIds) {
+      let linhas;
+      try {
+        linhas = await tx.consulta(
+          `insert into reuniao_convite
+                 (reuniao_id, vinculo_id, pessoa_id, instituicao_id, created_by)
+           select $1, v.id, v.pessoa_id, v.instituicao_id, $3
+             from vinculo v
+             join instituicao i on i.id = v.instituicao_id
+            where v.instituicao_id = any($2::uuid[])
+              and v.status = 'ativo'
+              and i.status not in ('inativa', 'desligada')
+              and (not $4 or v.tipo_representacao in ('titular', 'suplente'))
+           on conflict (reuniao_id, vinculo_id) do nothing
+             returning id`,
+          [r.id, instituicaoIds, u.id, apenasTitulares],
+        );
+      } catch (e) {
+        traduzirErroDoBanco(e);
+      }
+      inseridos = linhas?.length ?? 0;
+    } else if (!vinculoIds) {
       // A função do banco já cuida de não duplicar nem apagar resposta dada,
       // então clicar duas vezes no botão é seguro.
       const total = await tx.consultaUm(

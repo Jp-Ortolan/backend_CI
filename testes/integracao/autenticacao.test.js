@@ -65,7 +65,7 @@ before(async () => {
 
   const { rows } = await admin.query(
     `insert into usuario (nome, email, papel, senha_hash)
-     values ('Teste Integração', $1, 'gestor', $2) returning id`,
+     values ('Teste Integração', $1, 'diretoria', $2) returning id`,
     [EMAIL, await gerarHash(SENHA)],
   );
   usuarioId = rows[0].id;
@@ -121,7 +121,7 @@ test('sessão criada é lida de volta e some ao ser encerrada', { skip: !rodar }
   const lida = await db.query('select id, papel from auth_ler_sessao($1)', [hashToken(token)]);
   assert.equal(lida.rows.length, 1, 'a sessão recém-criada deveria ser encontrada');
   assert.equal(lida.rows[0].id, usuarioId);
-  assert.equal(lida.rows[0].papel, 'gestor');
+  assert.equal(lida.rows[0].papel, 'diretoria');
 
   await db.query('select auth_encerrar_sessao($1)', [hashToken(token)]);
   const depois = await db.query('select * from auth_ler_sessao($1)', [hashToken(token)]);
@@ -190,7 +190,7 @@ test('RLS enxerga o usuário declarado na transação', { skip: !rodar }, async 
   await db.query("select set_config('app.usuario_id', $1, true)", [usuarioId]);
 
   const { rows } = await db.query('select papel_atual() as papel');
-  assert.equal(rows[0].papel, 'gestor');
+  assert.equal(rows[0].papel, 'diretoria');
 
   await db.query('rollback');
 });

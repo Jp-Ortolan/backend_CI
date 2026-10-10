@@ -96,19 +96,28 @@ before(async () => {
   });
   await db.connect();
 
-  /** @param {'admin'|'gestor'|'leitura'} papel */
+  /** @param {'admin'|'diretoria'|'representante'} papel */
   const criarUsuario = async (papel) => {
     const { rows } = await db.query(
-      `insert into usuario (nome, email, papel)
-       values ($1, $2, $3) returning id, nome, email, papel, ativo`,
-      [`Teste ${papel} ${MARCA}`, `${papel}.${MARCA}@exemplo.br`, papel],
+      `with inst as (
+         -- O representante é a conta DE uma instituição (revisão de outubro).
+         -- Nos testes ele representa uma instituição própria, diferente das
+         -- que os testes manipulam: é o caso "outra instituição".
+         insert into instituicao (nome, status)
+         select $4, 'ativa' where $3::papel_usuario = 'representante' returning id)
+       insert into usuario (nome, email, papel, instituicao_id)
+       values ($1, $2, $3, (select id from inst))
+       returning id, nome, email, papel, ativo,
+                 instituicao_id as "instituicaoId", pessoa_id as "pessoaId"`,
+      [`Teste ${papel} ${MARCA}`, `${papel}.${MARCA}@exemplo.br`, papel,
+        `Instituição do representante r${Math.random().toString(36).slice(2)}`],
     );
     return rows[0];
   };
 
   admin = await criarUsuario('admin');
-  gestor = await criarUsuario('gestor');
-  leitura = await criarUsuario('leitura');
+  gestor = await criarUsuario('diretoria');
+  leitura = await criarUsuario('representante');
 
   const { rows: t } = await db.query('select id from tipo_instituicao order by id limit 1');
   const { rows: a } = await db.query('select id from area_atuacao order by id limit 1');
@@ -465,16 +474,29 @@ describe('domínios e indicadores', { skip: !rodar }, () => {
     const d = await listarDominios(leitura);
     assert.ok(d.tiposInstituicao.length >= 8, 'os tipos da carga inicial deveriam estar lá');
     assert.ok(d.areasAtuacao.length >= 9, 'as áreas da migration 002 deveriam estar lá');
-    assert.equal(d.statusInstituicao.length, 4);
+    // Fluxo do Fórum (migration 007): rascunho → ... → desligada.
+    assert.equal(d.statusInstituicao.length, 8);
+    assert.ok(d.tiposAtividade.some((t) => t.natureza === 'evento'),
+      'os tipos de evento da migration 010 deveriam estar lá');
   });
 
   test('o dashboard responde com a forma que a tela espera', async () => {
-    const d = await obterDashboard(leitura);
+    const d = await obterDashboard(gestor);
+    assert.equal(d.escopo, 'tudo');
     assert.equal(typeof d.cartoes.instituicoes.ativas, 'number');
     assert.equal(typeof d.cartoes.representantesAtivos, 'number');
     assert.ok(Array.isArray(d.evolucaoParticipacao));
     assert.ok(Array.isArray(d.participacaoPorInstituicao));
     assert.ok(Array.isArray(d.proximasReunioes));
+  });
+
+  test('representante vê o geral do Fórum e o recorte da instituição dele', async () => {
+    const d = await obterDashboard(leitura);
+    assert.equal(d.escopo, 'instituicao');
+    assert.equal(typeof d.geral.instituicoesIntegrantes, 'number');
+    assert.equal(d.minhaInstituicao.id, leitura.instituicaoId);
+    assert.ok(Array.isArray(d.proximasReunioes));
+    assert.equal(d.cartoes, undefined, 'o painel da gestão não vai para o representante');
   });
 
   test('perfil de consulta enxerga indicador mas não escreve', async () => {

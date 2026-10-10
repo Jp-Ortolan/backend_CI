@@ -19,7 +19,7 @@ export async function encerrarReuniao(usuario, reuniaoId) {
 
   return comUsuario(u.id, async (tx) => {
     const r = await tx.consultaUm(
-      'select id, data, status from reuniao where id = $1', [reuniaoId],
+      'select id, data, status, conta_participacao from reuniao where id = $1', [reuniaoId],
     );
     if (!r) throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
     if (r.status === 'cancelada') {
@@ -30,23 +30,48 @@ export async function encerrarReuniao(usuario, reuniaoId) {
     if (r.status === 'encerrada') {
       throw new ErroDeNegocio('DADOS_INVALIDOS', 'Esta reunião já foi encerrada.');
     }
+    if (r.status === 'rascunho') {
+      throw new ErroDeNegocio('DADOS_INVALIDOS',
+        'Esta atividade ainda é rascunho: publique-a antes de encerrar.');
+    }
 
-    // Quem tinha vínculo válido NA DATA da reunião era esperado ali e não
-    // registrou presença: entra como ausente, com o snapshot daquele vínculo.
-    const ausentes = await tx.consulta(
-      `insert into presenca (reuniao_id, pessoa_id, vinculo_id, instituicao_id,
-                             cargo_no_momento, tipo, status, origem, registrado_por)
-       select $1, v.pessoa_id, v.id, v.instituicao_id, v.cargo,
-              'representante', 'ausente', 'manual', $2
-         from vinculo v
-        where v.data_inicio <= $3
-          and (v.data_fim is null or v.data_fim >= $3)
-          and not exists (
-            select 1 from presenca p
-             where p.reuniao_id = $1 and p.pessoa_id = v.pessoa_id)
-       returning id`,
-      [r.id, u.id, r.data],
-    );
+    // Quem era esperado ali e não registrou presença entra como ausente, com o
+    // snapshot do vínculo daquela data.
+    //   conta no percentual oficial  → esperado = todo vínculo vigente na data
+    //   não conta (workshop, GT...)  → esperado = só quem foi CONVIDADO
+    // Sem essa diferença, encerrar uma palestra lançaria falta para as 120
+    // instituições do Fórum.
+    const ausentes = r.conta_participacao
+      ? await tx.consulta(
+        `insert into presenca (reuniao_id, pessoa_id, vinculo_id, instituicao_id,
+                               cargo_no_momento, tipo, status, origem, registrado_por)
+         select $1, v.pessoa_id, v.id, v.instituicao_id, v.cargo,
+                'representante', 'ausente', 'manual', $2
+           from vinculo v
+          where v.data_inicio <= $3
+            and (v.data_fim is null or v.data_fim >= $3)
+            and not exists (
+              select 1 from presenca p
+               where p.reuniao_id = $1 and p.pessoa_id = v.pessoa_id)
+         on conflict (reuniao_id, pessoa_id) do nothing
+         returning id`,
+        [r.id, u.id, r.data],
+      )
+      : await tx.consulta(
+        `insert into presenca (reuniao_id, pessoa_id, vinculo_id, instituicao_id,
+                               cargo_no_momento, tipo, status, origem, registrado_por)
+         select distinct on (c.pessoa_id) $1, c.pessoa_id, c.vinculo_id, c.instituicao_id, v.cargo,
+                'representante', 'ausente', 'manual', $2
+           from reuniao_convite c
+           join vinculo v on v.id = c.vinculo_id
+          where c.reuniao_id = $1
+            and not exists (
+              select 1 from presenca p
+               where p.reuniao_id = $1 and p.pessoa_id = c.pessoa_id)
+         on conflict (reuniao_id, pessoa_id) do nothing
+         returning id`,
+        [r.id, u.id],
+      );
 
     const atualizada = await tx.consultaUm(
       `update reuniao set status = 'encerrada' where id = $1 returning id`, [r.id],
@@ -58,7 +83,7 @@ export async function encerrarReuniao(usuario, reuniaoId) {
     }
 
     const resumo = await tx.consultaUm(
-      `select presentes, ausentes, convidados, esperados,
+      `select presentes, ausentes, convidados, esperados, equipe, justificados,
               percentual_presenca, percentual_comparecimento
          from vw_resumo_reuniao where reuniao_id = $1`, [r.id],
     );
@@ -68,7 +93,10 @@ export async function encerrarReuniao(usuario, reuniaoId) {
       presentes: Number(resumo?.presentes ?? 0),
       ausentesMarcados: ausentes.length,
       convidados: Number(resumo?.convidados ?? 0),
+      equipe: Number(resumo?.equipe ?? 0),
+      justificados: Number(resumo?.justificados ?? 0),
       esperados: Number(resumo?.esperados ?? 0),
+      contaParticipacao: r.conta_participacao,
       // O indicador que vale, corrigido na migration 002: representantes
       // presentes ÷ vínculos vigentes na data, sem o convidado avulso.
       percentualComparecimento: resumo?.percentual_comparecimento ?? null,

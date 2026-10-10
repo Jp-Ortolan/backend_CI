@@ -12,9 +12,10 @@ import { esquemaFiltroReuniao } from './esquemas.js';
 /**
  * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao|null} usuario
  * @param {unknown} filtros
+ * @param {'reuniao'|'evento'} [natureza]  /api/reunioes só lista reunião; /api/eventos, só evento
  */
-export async function listarReunioes(usuario, filtros) {
-  const u = exigir(usuario, 'reuniao', 'ver');
+export async function listarReunioes(usuario, filtros, natureza = 'reuniao') {
+  const u = exigir(usuario, natureza, 'ver');
   const f = validar(esquemaFiltroReuniao, filtros ?? {});
 
   /** @type {string[]} */
@@ -31,7 +32,11 @@ export async function listarReunioes(usuario, filtros) {
     onde(`(imutavel_unaccent(lower(r.titulo)) like '%' || imutavel_unaccent(lower(?)) || '%')`,
       f.busca);
   }
+  onde('r.natureza = ?::natureza_atividade', natureza);
   if (f.status) onde('r.status = ?::status_reuniao', f.status);
+  if (f.tipoAtividadeId) onde('r.tipo_atividade_id = ?', f.tipoAtividadeId);
+  if (f.grupoTrabalhoId) onde('r.grupo_trabalho_id = ?', f.grupoTrabalhoId);
+  if (f.modalidade) onde('r.modalidade = ?::modalidade_atividade', f.modalidade);
   if (f.de) onde('r.data >= ?::date', f.de);
   if (f.ate) onde('r.data <= ?::date', f.ate);
 
@@ -60,13 +65,17 @@ export async function listarReunioes(usuario, filtros) {
   return comUsuario(u.id, async (tx) => {
     const linhas = await tx.consulta(
       `select r.id, r.titulo, r.descricao, r.data, r.hora_inicio, r.hora_fim,
-              r.local, r.endereco, r.status,
+              r.local, r.endereco, r.status, r.natureza, r.numero, r.modalidade,
+              r.conta_participacao, r.exibir_publico, r.organizacao_responsavel,
+              r.evento_proprio, r.limite_participantes,
+              t.nome as tipo,
               v.esperados, v.convites_enviados, v.confirmados,
               v.presentes, v.ausentes, v.convidados,
               v.percentual_comparecimento,
               count(*) over() as total_geral
          from reuniao r
          join vw_resumo_reuniao v on v.reuniao_id = r.id
+         left join tipo_atividade t on t.id = r.tipo_atividade_id
          ${filtro}
         order by r.data ${direcao}, r.hora_inicio ${direcao} nulls last
         limit $${valores.length - 1} offset $${valores.length}`,
@@ -79,6 +88,15 @@ export async function listarReunioes(usuario, filtros) {
       dados: linhas.map((l) => ({
         id: l.id,
         titulo: l.titulo,
+        natureza: l.natureza,
+        tipo: l.tipo,
+        numero: l.numero,
+        modalidade: l.modalidade,
+        contaParticipacao: l.conta_participacao,
+        exibirPublico: l.exibir_publico,
+        organizacaoResponsavel: l.organizacao_responsavel,
+        eventoProprio: l.evento_proprio,
+        limiteParticipantes: l.limite_participantes,
         descricao: l.descricao,
         data: l.data,
         horaInicio: l.hora_inicio,

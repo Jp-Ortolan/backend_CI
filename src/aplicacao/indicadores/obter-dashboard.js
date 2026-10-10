@@ -8,6 +8,7 @@
  */
 import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { exigir } from '@/aplicacao/guarda.js';
+import { ehGestao } from '@/dominio/permissoes.js';
 
 /** Quantas instituições entram no ranking "Participação por instituição". */
 const TOP_INSTITUICOES = 5;
@@ -20,6 +21,13 @@ const PROXIMAS_REUNIOES = 5;
  */
 export async function obterDashboard(usuario) {
   const u = exigir(usuario, 'indicador', 'ver');
+
+  // O representante vê o dashboard GERAL do Fórum ("Visualizar dashboard
+  // geral: ✅") — só que, com o RLS recortando as tabelas pela instituição
+  // dele, as views dariam números só da instituição. Os números gerais vêm da
+  // mesma função do painel público (agregados, sem nome de ninguém), e ao lado
+  // vai o recorte da instituição dele.
+  if (!ehGestao(u.papel)) return dashboardDoRepresentante(u);
 
   return comUsuario(u.id, async (tx) => {
     const ind = await tx.consultaUm('select * from vw_dashboard');
@@ -53,7 +61,7 @@ export async function obterDashboard(usuario) {
 
     const proximas = await tx.consulta(
       `select r.id, r.titulo, r.descricao, r.data, r.hora_inicio,
-              r.local, r.endereco, r.status,
+              r.local, r.endereco, r.status, r.natureza,
               v.convites_enviados, v.confirmados
          from reuniao r
          join vw_resumo_reuniao v on v.reuniao_id = r.id
@@ -65,6 +73,7 @@ export async function obterDashboard(usuario) {
     );
 
     return {
+      escopo: 'tudo',
       cartoes: {
         instituicoes: {
           ativas: Number(ind?.instituicoes_ativas ?? 0),
@@ -74,6 +83,8 @@ export async function obterDashboard(usuario) {
         representantesAtivos: Number(ind?.representantes_ativos ?? 0),
         reunioesRealizadas: Number(ind?.reunioes_realizadas ?? 0),
         reunioesAgendadas: Number(ind?.reunioes_agendadas ?? 0),
+        eventosRealizados: Number(ind?.eventos_realizados ?? 0),
+        solicitacoesPendentes: Number(ind?.solicitacoes_pendentes ?? 0),
         // Sem reunião encerrada ainda não existe média. null e não 0, para a
         // tela poder mostrar "—" em vez de anunciar 0% de presença.
         mediaPresenca: ind?.media_presenca ?? null,
@@ -97,6 +108,7 @@ export async function obterDashboard(usuario) {
       proximasReunioes: proximas.map((l) => ({
         id: l.id,
         titulo: l.titulo,
+        natureza: l.natureza,
         descricao: l.descricao,
         data: l.data,
         horaInicio: l.hora_inicio,
@@ -105,6 +117,69 @@ export async function obterDashboard(usuario) {
         status: l.status,
         convitesEnviados: Number(l.convites_enviados),
         confirmados: Number(l.confirmados),
+      })),
+    };
+  });
+}
+
+/**
+ * Dashboard do representante: números gerais do Fórum + a instituição dele.
+ *
+ * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} u
+ */
+async function dashboardDoRepresentante(u) {
+  return comUsuario(u.id, async (tx) => {
+    const geral = (await tx.consultaUm('select publico_indicadores() as j'))?.j ?? {};
+
+    const minha = u.instituicaoId
+      ? await tx.consultaUm(
+        `select i.id, i.nome, i.status, w.reunioes_esperadas, w.reunioes_com_presenca,
+                w.percentual_participacao, w.representantes_ativos,
+                (select count(*) from solicitacao s
+                  where s.instituicao_id = i.id and s.status = 'pendente') as solicitacoes_pendentes
+           from instituicao i
+           left join vw_participacao_instituicao w on w.instituicao_id = i.id
+          where i.id = $1`, [u.instituicaoId])
+      : null;
+
+    const proximas = await tx.consulta(
+      `select r.id, r.titulo, r.natureza, r.data, r.hora_inicio, r.local, r.endereco, r.status,
+              (select c.status from reuniao_convite c
+                where c.reuniao_id = r.id and c.instituicao_id = $1 limit 1) as minha_confirmacao
+         from reuniao r
+        where r.status in ('agendada', 'em_andamento') and r.data >= current_date
+        order by r.data, r.hora_inicio nulls last
+        limit $2`,
+      [u.instituicaoId ?? null, PROXIMAS_REUNIOES],
+    );
+
+    return {
+      escopo: 'instituicao',
+      geral,
+      minhaInstituicao: minha
+        ? {
+          id: minha.id,
+          nome: minha.nome,
+          status: minha.status,
+          representantesAtivos: Number(minha.representantes_ativos ?? 0),
+          reunioesEsperadas: Number(minha.reunioes_esperadas ?? 0),
+          reunioesComPresenca: Number(minha.reunioes_com_presenca ?? 0),
+          percentualParticipacao: minha.percentual_participacao === null
+            || minha.percentual_participacao === undefined
+            ? null : Number(minha.percentual_participacao),
+          solicitacoesPendentes: Number(minha.solicitacoes_pendentes ?? 0),
+        }
+        : null,
+      proximasReunioes: proximas.map((l) => ({
+        id: l.id,
+        titulo: l.titulo,
+        natureza: l.natureza,
+        data: l.data,
+        horaInicio: l.hora_inicio,
+        local: l.local,
+        endereco: l.endereco,
+        status: l.status,
+        minhaConfirmacao: l.minha_confirmacao,
       })),
     };
   });

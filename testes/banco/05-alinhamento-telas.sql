@@ -143,7 +143,7 @@ declare v_id uuid;
 begin
   -- Cadastro criado por engano, sem vínculo e sem presença: esse pode sair.
   insert into instituicao (nome, cnpj, status)
-  values ('Cadastro Errado', '99999999999999', 'em_processo_entrada')
+  values ('Cadastro Errado', '99999999999999', 'em_analise')
   returning id into v_id;
 
   delete from instituicao where id = v_id;
@@ -255,17 +255,32 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
+-- Desde a 008: Diretoria lê o log inteiro (é gestão); o representante, só o da
+-- instituição dele; sem usuário, nada.
 do $$
-declare v_qtd int;
+declare v_qtd int; v_outras int;
 begin
   set local role app_web;
   perform set_config('app.usuario_id', '11111111-1111-1111-1111-111111111113', true);
+  select count(*) into v_qtd from log_auditoria;
+  if v_qtd = 0 then
+    raise exception 'FALHOU: a Diretoria não enxergou o log de auditoria';
+  end if;
 
+  perform set_config('app.usuario_id', '11111111-1111-1111-1111-111111111112', true);
+  select count(*) into v_outras from log_auditoria
+   where not (entidade = 'instituicao'
+              and registro_id = 'aaaaaaaa-0000-0000-0000-000000000001');
+  if v_outras <> 0 then
+    raise exception 'FALHOU: representante enxergou % linhas de log de outras entidades', v_outras;
+  end if;
+
+  perform set_config('app.usuario_id', '', true);
   select count(*) into v_qtd from log_auditoria;
   if v_qtd <> 0 then
-    raise exception 'FALHOU: gestor enxergou % linhas do log de auditoria', v_qtd;
+    raise exception 'FALHOU: sem usuário, o log ficou visível (% linhas)', v_qtd;
   end if;
-  raise notice 'OK   auditoria — log é visível apenas para administrador';
+  raise notice 'OK   auditoria — gestão lê tudo, representante só a própria instituição';
 end $$;
 
 -- ------------------------------------------------------- fórmula da presença

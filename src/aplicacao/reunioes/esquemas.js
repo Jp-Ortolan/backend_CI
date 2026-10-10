@@ -54,6 +54,33 @@ const objetoReuniao = z.object({
   // Atalho da tela de criação: já convida todos os vínculos ativos de
   // instituições ativas. Com 122 instituições, convidar na mão não é opção.
   convidarTodos: z.coerce.boolean().optional().default(false),
+
+  // ------------------------------------------- revisão de outubro (migration 010)
+  // Rascunho = montada pela Diretoria, ainda não divulgada; agendada = publicada.
+  status: z.enum(['rascunho', 'agendada']).optional(),
+  tipoAtividadeId: z.coerce.number().int().positive('Selecione o tipo.').optional().nullable(),
+  // "68ª Reunião Ordinária"
+  numero: z.coerce.number().int().positive('O número precisa ser maior que zero.')
+    .optional().nullable(),
+  modalidade: z.enum(['presencial', 'online', 'hibrida'], {
+    errorMap: () => ({ message: 'Modalidade: presencial, online ou hibrida.' }),
+  }).optional(),
+  responsavel: opcional(200),
+  publicoAlvo: opcional(500),
+  limiteParticipantes: z.coerce.number().int().positive('O limite precisa ser maior que zero.')
+    .optional().nullable(),
+  // Se entra no percentual OFICIAL de participação. Sem informar, vale o padrão
+  // do tipo (ordinária e extraordinária contam; evento não).
+  contaParticipacao: z.boolean().optional(),
+  permiteConvidado: z.boolean().optional(),
+  exibirPublico: z.boolean().optional(),
+  grupoTrabalhoId: z.coerce.number().int().positive().optional().nullable(),
+  // Só de evento
+  organizacaoResponsavel: opcional(200),
+  eventoProprio: z.boolean().optional(),
+  inscricaoUrl: z.string().trim().url('Informe o link de inscrição completo, com https://')
+    .max(500).optional().or(z.literal('')).transform((v) => (v || null)),
+  totalParticipantesExterno: z.coerce.number().int().min(0).optional().nullable(),
 });
 
 /**
@@ -78,7 +105,7 @@ export const esquemaCriarReuniao = comCoerenciaDeHorario(objetoReuniao);
 export const esquemaEditarReuniao = comCoerenciaDeHorario(objetoReuniao.partial());
 
 export const esquemaStatusReuniao = z.object({
-  status: z.enum(['agendada', 'em_andamento', 'cancelada'], {
+  status: z.enum(['rascunho', 'agendada', 'em_andamento', 'cancelada'], {
     errorMap: () => ({ message: 'Situação inválida.' }),
   }),
   motivo: z.string().trim().max(300).optional().nullable(),
@@ -86,7 +113,10 @@ export const esquemaStatusReuniao = z.object({
 
 export const esquemaFiltroReuniao = z.object({
   busca: z.string().trim().max(120).optional(),
-  status: z.enum(['agendada', 'em_andamento', 'encerrada', 'cancelada']).optional(),
+  status: z.enum(['rascunho', 'agendada', 'em_andamento', 'encerrada', 'cancelada']).optional(),
+  tipoAtividadeId: z.coerce.number().int().positive().optional(),
+  grupoTrabalhoId: z.coerce.number().int().positive().optional(),
+  modalidade: z.enum(['presencial', 'online', 'hibrida']).optional(),
   // Atalhos que a tela de lista usa nas abas.
   periodo: z.enum(['proximas', 'passadas', 'todas']).default('todas'),
   de: z.string().regex(DATA).optional(),
@@ -96,6 +126,9 @@ export const esquemaFiltroReuniao = z.object({
   pagina: z.coerce.number().int().min(1).default(1),
   porPagina: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+/** Rótulos para as telas. */
+export const ROTULO_NATUREZA = { reuniao: 'Reunião', evento: 'Evento' };
 
 /**
  * camelCase da tela → colunas do banco. Mesmo papel do paraColunas() das
@@ -119,12 +152,32 @@ export function paraColunasReuniao(d) {
     senhaAcesso: ['senha_acesso', d.senhaAcesso],
     checkinAbreEm: ['checkin_abre_em', d.checkinAbreEm],
     checkinFechaEm: ['checkin_fecha_em', d.checkinFechaEm],
+    status: ['status', d.status],
+    tipoAtividadeId: ['tipo_atividade_id', d.tipoAtividadeId],
+    numero: ['numero', d.numero],
+    modalidade: ['modalidade', d.modalidade],
+    responsavel: ['responsavel', d.responsavel],
+    publicoAlvo: ['publico_alvo', d.publicoAlvo],
+    limiteParticipantes: ['limite_participantes', d.limiteParticipantes],
+    contaParticipacao: ['conta_participacao', d.contaParticipacao],
+    permiteConvidado: ['permite_convidado', d.permiteConvidado],
+    exibirPublico: ['exibir_publico', d.exibirPublico],
+    grupoTrabalhoId: ['grupo_trabalho_id', d.grupoTrabalhoId],
+    organizacaoResponsavel: ['organizacao_responsavel', d.organizacaoResponsavel],
+    eventoProprio: ['evento_proprio', d.eventoProprio],
+    inscricaoUrl: ['inscricao_url', d.inscricaoUrl],
+    totalParticipantesExterno: ['total_participantes_externo', d.totalParticipantesExterno],
   };
 
   /** @type {Record<string, any>} */
   const colunas = {};
   for (const [chave, [coluna, valor]] of Object.entries(mapa)) {
-    if (chave in d) colunas[coluna] = valor ?? null;
+    if (chave in d && d[chave] !== undefined) colunas[coluna] = valor ?? null;
+  }
+  // Colunas NOT NULL com padrão no banco: null explícito não apaga, ignora.
+  for (const c of ['modalidade', 'conta_participacao', 'permite_convidado',
+    'exibir_publico', 'evento_proprio', 'status']) {
+    if (c in colunas && colunas[c] === null) delete colunas[c];
   }
   return colunas;
 }

@@ -9,6 +9,7 @@ import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
 import { esquemaFiltro } from './esquemas.js';
 import { apenasDigitos } from '@/dominio/cnpj.js';
+import { ehGestao } from '@/dominio/permissoes.js';
 
 /** Colunas de ordenação aceitas. Lista fechada: o valor entra na SQL. */
 const ORDENACAO = {
@@ -72,6 +73,19 @@ export async function listarInstituicoes(usuario, filtros) {
   if (f.tipoInstituicaoId) onde('i.tipo_instituicao_id = ?', f.tipoInstituicaoId);
   if (f.areaAtuacaoId) onde('i.area_atuacao_id = ?', f.areaAtuacaoId);
   if (f.uf) onde('i.uf = ?', f.uf);
+  if (f.vertenteId) onde('i.vertente_id = ?', f.vertenteId);
+  if (f.grupoTrabalhoId) {
+    onde(`exists (select 1 from instituicao_grupo_trabalho ig
+                  where ig.instituicao_id = i.id and ig.grupo_trabalho_id = ?)`, f.grupoTrabalhoId);
+  }
+
+  // O representante consulta as instituições integrantes do Fórum (e a dele,
+  // em qualquer situação). Cadastro em rascunho ou em análise de OUTRA
+  // instituição ainda não é público entre os membros.
+  if (!ehGestao(u.papel)) {
+    valores.push(u.instituicaoId ?? null);
+    condicoes.push(`(i.status in ('ativa', 'em_processo_saida') or i.id = $${valores.length})`);
+  }
   if (f.cidade) {
     onde('imutavel_unaccent(lower(i.cidade)) = imutavel_unaccent(lower(?))', f.cidade);
   }
@@ -85,9 +99,14 @@ export async function listarInstituicoes(usuario, filtros) {
 
   return comUsuario(u.id, async (tx) => {
     const linhas = await tx.consulta(
-      `select i.id, i.nome, i.cnpj, i.email, i.cidade, i.uf, i.status,
+      `select i.id, i.nome, i.nome_fantasia, i.cnpj, i.email, i.cidade, i.uf, i.status,
               t.nome as tipo,
               a.nome as area,
+              ve.nome as vertente,
+              (i.logo_documento_id is not null) as tem_logo,
+              (select p.nome from vinculo v join pessoa p on p.id = v.pessoa_id
+                where v.instituicao_id = i.id and v.status = 'ativo'
+                  and v.tipo_representacao = 'titular' limit 1) as titular,
               (select count(*) from vinculo v
                 where v.instituicao_id = i.id and v.status = 'ativo')
                 as representantes_ativos,
@@ -97,6 +116,7 @@ export async function listarInstituicoes(usuario, filtros) {
          from instituicao i
          left join tipo_instituicao t on t.id = i.tipo_instituicao_id
          left join area_atuacao     a on a.id = i.area_atuacao_id
+         left join vertente        ve on ve.id = i.vertente_id
          ${filtro}
         order by ${coluna} ${direcao} nulls last, i.id
         ${limite}`,
@@ -109,10 +129,14 @@ export async function listarInstituicoes(usuario, filtros) {
       dados: linhas.map((l) => ({
         id: l.id,
         nome: l.nome,
+        nomeFantasia: l.nome_fantasia,
         cnpj: l.cnpj,
         email: l.email,
         tipo: l.tipo,
         area: l.area,
+        vertente: l.vertente,
+        titular: l.titular,
+        logoUrl: l.tem_logo ? `/api/instituicoes/${l.id}/logo` : null,
         cidade: l.cidade,
         uf: l.uf,
         status: l.status,

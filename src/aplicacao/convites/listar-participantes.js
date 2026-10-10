@@ -18,6 +18,8 @@ export const esquemaFiltroParticipante = z.object({
     'presentes',
     'ausentes',
     'convidados',      // o convidado avulso do QR Code, sem vínculo
+    'equipe',          // equipe do Centro de Inovação
+    'justificados',
     'confirmados',
     'pendentes',       // convidado que ainda não respondeu
     'nao_registrados', // convidado sem nenhuma presença lançada
@@ -30,6 +32,8 @@ const SITUACAO = {
   presentes: "and p.status_presenca = 'presente'",
   ausentes: "and p.status_presenca = 'ausente'",
   convidados: "and p.tipo = 'convidado'",
+  equipe: "and p.tipo = 'equipe'",
+  justificados: "and p.status_presenca = 'justificado'",
   confirmados: "and p.status_confirmacao = 'confirmado'",
   pendentes: "and p.convite_id is not null and p.status_confirmacao = 'pendente'",
   nao_registrados: 'and p.presenca_id is null',
@@ -77,6 +81,8 @@ export async function listarParticipantes(usuario, reuniaoId, filtros) {
               count(*) filter (where status_presenca = 'presente')::int  as presentes,
               count(*) filter (where status_presenca = 'ausente')::int   as ausentes,
               count(*) filter (where tipo = 'convidado')::int            as convidados,
+              count(*) filter (where tipo = 'equipe')::int               as equipe,
+              count(*) filter (where status_presenca = 'justificado')::int as justificados,
               count(*) filter (where status_confirmacao = 'confirmado'
                                  and convite_id is not null)::int        as confirmados,
               count(*) filter (where convite_id is not null
@@ -101,6 +107,11 @@ export async function listarParticipantes(usuario, reuniaoId, filtros) {
         statusPresenca: p.status_presenca,
         horarioCheckin: p.horario_checkin,
         origemPresenca: p.origem_presenca,
+        modo: p.modo,
+        assinadoEm: p.assinado_em,
+        observacoes: p.observacoes_presenca,
+        registradoPor: p.registrado_por,
+        tipoRepresentacao: p.tipo_representacao,
       })),
       totais: totais ?? {},
     };

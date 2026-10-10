@@ -3,13 +3,16 @@
  * Serve para o editor completar nome de coluna e avisar status escrito errado.
  */
 
-/** @typedef {'em_processo_entrada'|'ativa'|'em_processo_saida'|'inativa'} StatusInstituicao */
+/** @typedef {'rascunho'|'aguardando_documentos'|'em_analise'|'ajustes_solicitados'
+ *   |'ativa'|'em_processo_saida'|'inativa'|'desligada'} StatusInstituicao */
 /** @typedef {'ativo'|'encerrado'} StatusVinculo */
-/** @typedef {'agendada'|'em_andamento'|'encerrada'|'cancelada'} StatusReuniao */
-/** @typedef {'representante'|'convidado'} TipoParticipante */
+/** @typedef {'rascunho'|'agendada'|'em_andamento'|'encerrada'|'cancelada'} StatusReuniao */
+/** @typedef {'reuniao'|'evento'} NaturezaAtividade */
+/** @typedef {'titular'|'suplente'|'integrante'|'convidado'} TipoRepresentacao */
+/** @typedef {'representante'|'convidado'|'equipe'} TipoParticipante */
 /** @typedef {'presente'|'ausente'|'justificado'} StatusPresenca */
 /** @typedef {'qrcode'|'manual'|'importacao'} OrigemPresenca */
-/** @typedef {'admin'|'gestor'|'leitura'} PapelUsuario */
+/** @typedef {'admin'|'diretoria'|'representante'} PapelUsuario */
 
 /**
  * @typedef {object} Instituicao

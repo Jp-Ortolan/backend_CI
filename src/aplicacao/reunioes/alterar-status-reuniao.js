@@ -12,7 +12,9 @@ import { esquemaStatusReuniao } from './esquemas.js';
 
 /** Para onde cada situação pode ir. Fora disto, não passa. */
 const TRANSICOES = {
-  agendada: ['em_andamento', 'cancelada'],
+  // Rascunho: a Diretoria monta, revisa e publica (agendada).
+  rascunho: ['agendada', 'cancelada'],
+  agendada: ['em_andamento', 'cancelada', 'rascunho'],
   em_andamento: ['agendada', 'cancelada'],
   cancelada: ['agendada'],
   // Reunião encerrada não volta atrás por aqui: os ausentes já foram gravados,
@@ -24,16 +26,19 @@ const TRANSICOES = {
  * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao|null} usuario
  * @param {string} id
  * @param {unknown} entrada
+ * @param {'reuniao'|'evento'} [natureza]
  */
-export async function alterarStatusReuniao(usuario, id, entrada) {
-  const u = exigir(usuario, 'reuniao', 'editar');
+export async function alterarStatusReuniao(usuario, id, entrada, natureza) {
+  const u = exigir(usuario, natureza ?? 'reuniao', 'editar');
   const { status, motivo } = validar(esquemaStatusReuniao, entrada);
 
   return comUsuario(u.id, async (tx) => {
     const atual = await tx.consultaUm(
-      'select id, status, titulo from reuniao where id = $1', [id],
+      'select id, status, titulo, natureza from reuniao where id = $1', [id],
     );
-    if (!atual) throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
+    if (!atual || (natureza && atual.natureza !== natureza)) {
+      throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
+    }
 
     if (atual.status === status) {
       throw new ErroDeNegocio('DADOS_INVALIDOS', `A reunião já está "${status}".`);

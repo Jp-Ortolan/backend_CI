@@ -120,7 +120,7 @@ Variáveis do serviço da aplicação:
 |---|---|
 | `DATABASE_URL` | string com o usuário **app_web** |
 | `URL_FRONTEND` | a URL pública do **front-end**: origem liberada no CORS, base do QR e do link de senha |
-| `COOKIE_CROSS_SITE` | `1` só quando front e API ficam em domínios diferentes |
+| `COOKIE_CROSS_SITE` | Opcional desde outubro: a API detecta sozinha o front em outro domínio HTTPS e grava o cookie `SameSite=None; Secure; Partitioned`. `1` força esse modo |
 | `EMAIL_PROVEDOR` | `resend` quando houver conta; sem ela, o link sai no log |
 | `RESEND_API_KEY` | chave do provedor |
 | `EMAIL_REMETENTE` | remetente verificado |
@@ -176,3 +176,30 @@ backup — é esperança. Fica como card da Semana 6.
 - Antes da primeira reunião real com QR Code, acompanhar as conexões durante o
   check-in — é o único pico previsível do sistema (RNF09). O pool está limitado
   a 10 conexões por instância (`DB_MAX_CONEXOES`).
+
+
+---
+
+## Sessão com front e API em domínios diferentes (revisão de outubro)
+
+Front no Vercel e API no Railway são **sites diferentes**. O cookie de sessão só
+volta se for gravado com `SameSite=None; Secure` — e, no Chrome com bloqueio de
+cookies de terceiros, também `Partitioned`. A API faz isso sozinha quando a
+requisição vem de uma origem HTTPS com outro host (ver
+`src/infraestrutura/seguranca/sessao.js`).
+
+O Safari, porém, bloqueia cookie de terceiro mesmo assim. A solução definitiva é
+o navegador nunca falar com outro domínio: no `vercel.json` do **front**, antes
+da regra que manda tudo para o `index.html`:
+
+```json
+{
+  "rewrites": [
+    { "source": "/api/:caminho*", "destination": "https://backendci-production.up.railway.app/api/:caminho*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
+```
+
+e `VITE_API_URL=` (vazio) no `.env.production` do front. O cookie passa a ser do
+próprio domínio do front, e o CORS deixa de ser necessário em produção.

@@ -14,19 +14,22 @@ import { exigir } from '@/aplicacao/guarda.js';
 /**
  * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao|null} usuario
  * @param {string} id
+ * @param {'reuniao'|'evento'} [natureza]
  */
-export async function excluirReuniao(usuario, id) {
-  const u = exigir(usuario, 'reuniao', 'excluir');
+export async function excluirReuniao(usuario, id, natureza) {
+  const u = exigir(usuario, natureza ?? 'reuniao', 'excluir');
 
   return comUsuario(u.id, async (tx) => {
     const atual = await tx.consultaUm(
-      `select r.id, r.titulo,
+      `select r.id, r.titulo, r.natureza,
               (select count(*) from presenca  p where p.reuniao_id = r.id) as presencas,
               (select count(*) from documento d where d.reuniao_id = r.id) as documentos
          from reuniao r where r.id = $1`,
       [id],
     );
-    if (!atual) throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
+    if (!atual || (natureza && atual.natureza !== natureza)) {
+      throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
+    }
 
     if (Number(atual.presencas) > 0) {
       throw new ErroDeNegocio(

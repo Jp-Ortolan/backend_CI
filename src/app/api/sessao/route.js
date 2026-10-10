@@ -10,26 +10,11 @@
  */
 import { entrar } from '@/aplicacao/autenticacao/entrar.js';
 import { usuarioAtual, encerrarSessao } from '@/infraestrutura/seguranca/sessao.js';
-import { menuDoPapel, ROTULO_PAPEL } from '@/dominio/permissoes.js';
+import { montarPerfil } from '@/aplicacao/autenticacao/perfil.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { ok, falha } from '@/infraestrutura/http/resposta.js';
 
 export const dynamic = 'force-dynamic';
-
-/**
- * O que o front precisa saber sobre quem entrou: além dos dados, o papel já
- * resolvido e o menu que ele pode ver, para não reimplementar a matriz na tela.
- *
- * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} u
- */
-const perfil = (u) => ({
-  id: u.id,
-  nome: u.nome,
-  email: u.email,
-  papel: u.papel,
-  rotuloPapel: ROTULO_PAPEL[u.papel],
-  menu: menuDoPapel(u.papel),
-});
 
 /**
  * POST — entrar.
@@ -51,7 +36,7 @@ export async function POST(req) {
     // o formato de erro do contrato.
     if (!r.ok) throw new ErroDeNegocio('NAO_AUTENTICADO', r.erro);
 
-    return ok(perfil(r.usuario));
+    return ok(await montarPerfil(r.usuario));
   } catch (e) {
     return falha(e);
   }
@@ -62,7 +47,7 @@ export async function GET() {
   try {
     const u = await usuarioAtual();
     if (!u) throw new ErroDeNegocio('NAO_AUTENTICADO', 'É preciso estar autenticado.');
-    return ok(perfil(u));
+    return ok(await montarPerfil(u));
   } catch (e) {
     return falha(e);
   }
