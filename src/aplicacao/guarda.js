@@ -4,7 +4,7 @@
  * Não substitui o RLS. É a primeira porta, para devolver 401/403 com mensagem
  * útil; a segunda porta é o banco, que recusa de novo.
  */
-import { pode } from '@/dominio/permissoes.js';
+import { pode, ehGestao } from '@/dominio/permissoes.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 
 /**
@@ -25,6 +25,39 @@ export function exigir(usuario, recurso, acao) {
       `Seu perfil não permite ${ACAO_EM_TEXTO[acao]} ${RECURSO_EM_TEXTO[recurso]}.`);
   }
   return usuario;
+}
+
+/**
+ * A instituição do representante. Conta de representante sem instituição não
+ * tem o que fazer na área da instituição — a mensagem diz o que falta.
+ *
+ * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} usuario
+ * @returns {string}
+ */
+export function instituicaoDoRepresentante(usuario) {
+  if (!usuario.instituicaoId) {
+    throw new ErroDeNegocio('CONTA_SEM_INSTITUICAO',
+      'Sua conta ainda não está ligada a uma instituição. '
+      + 'Peça ao administrador para concluir o cadastro.');
+  }
+  return usuario.instituicaoId;
+}
+
+/**
+ * Para o representante, a ação só vale na PRÓPRIA instituição. A gestão passa
+ * direto. O RLS recusaria de novo no banco; aqui é para a resposta ser 403 com
+ * mensagem, e não um "não encontrado" confuso.
+ *
+ * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} usuario
+ * @param {string|null|undefined} instituicaoId
+ */
+export function exigirInstituicaoPropria(usuario, instituicaoId) {
+  if (ehGestao(usuario.papel)) return;
+  const propria = instituicaoDoRepresentante(usuario);
+  if (instituicaoId !== propria) {
+    throw new ErroDeNegocio('SEM_PERMISSAO',
+      'Seu perfil só permite esta ação na sua própria instituição.');
+  }
 }
 
 /**
@@ -57,6 +90,7 @@ export function validar(esquema, entrada) {
 const ACAO_EM_TEXTO = {
   ver: 'consultar', criar: 'cadastrar', editar: 'editar',
   encerrar: 'encerrar', excluir: 'excluir', exportar: 'exportar',
+  aprovar: 'aprovar',
 };
 
 /** @type {Record<string, string>} */
@@ -64,4 +98,6 @@ const RECURSO_EM_TEXTO = {
   instituicao: 'instituições', representante: 'representantes',
   vinculo: 'vínculos', reuniao: 'reuniões', presenca: 'presenças',
   documento: 'documentos', usuario: 'usuários', indicador: 'indicadores',
+  evento: 'eventos', solicitacao: 'solicitações', relatorio: 'relatórios',
+  configuracao: 'configurações',
 };

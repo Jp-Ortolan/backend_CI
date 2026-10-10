@@ -59,13 +59,22 @@ before(async () => {
 
   /** @param {string} papel */
   const criarUsuario = async (papel) => (await db.query(
-    `insert into usuario (nome, email, papel) values ($1,$2,$3)
-     returning id, nome, email, papel, ativo`,
-    [`Teste ${papel} ${MARCA}`, `${papel}.${MARCA}@exemplo.br`, papel],
+    `with inst as (
+         -- O representante é a conta DE uma instituição (revisão de outubro).
+         -- Nos testes ele representa uma instituição própria, diferente das
+         -- que os testes manipulam: é o caso "outra instituição".
+         insert into instituicao (nome, status)
+         select $4, 'ativa' where $3::papel_usuario = 'representante' returning id)
+       insert into usuario (nome, email, papel, instituicao_id)
+       values ($1, $2, $3, (select id from inst))
+       returning id, nome, email, papel, ativo,
+                 instituicao_id as "instituicaoId", pessoa_id as "pessoaId"`,
+    [`Teste ${papel} ${MARCA}`, `${papel}.${MARCA}@exemplo.br`, papel,
+        `Instituição do representante r${Math.random().toString(36).slice(2)}`],
   )).rows[0];
 
-  gestor = await criarUsuario('gestor');
-  leitura = await criarUsuario('leitura');
+  gestor = await criarUsuario('diretoria');
+  leitura = await criarUsuario('representante');
 
   const { rows: t } = await db.query('select id from tipo_instituicao order by id limit 1');
   const { rows: a } = await db.query('select id from area_atuacao order by id limit 1');
@@ -169,10 +178,11 @@ describe('marcação manual de presença', { skip: !rodar }, () => {
     );
   });
 
-  test('perfil de consulta não marca presença', async () => {
+  test('representante não marca presença: pede correção por solicitação', async () => {
     await assert.rejects(
       () => marcarPresenca(leitura, reuniaoHoje, { pessoaId, status: 'presente' }),
-      (/** @type {any} */ e) => e.codigo === 'SEM_PERMISSAO',
+      (/** @type {any} */ e) => e.codigo === 'ALTERACAO_EXIGE_APROVACAO'
+        && e.extra.tipoSolicitacao === 'correcao_presenca',
     );
   });
 

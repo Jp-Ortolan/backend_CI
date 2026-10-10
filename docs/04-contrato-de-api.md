@@ -971,3 +971,151 @@ falha se alguém acrescentar `link` ou `senha` ali.
 
 `GET /api/dominios` passa a trazer **Faculdade** e **Centro de inovação**, que
 o select do Figma mostra e o seed não tinha.
+
+---
+
+# Revisão de outubro/2026 — perfis do Fórum, eventos, QR e painel público
+
+Migrations 007 a 011. O porquê de cada decisão está em
+[`12-revisao-outubro.md`](12-revisao-outubro.md); a matriz de perfis, em
+[`05-permissoes.md`](05-permissoes.md).
+
+## O que MUDOU em rotas que já existiam
+
+| Onde | Antes | Agora |
+|---|---|---|
+| `papel` (sessão, usuários) | `admin` / `gestor` / `leitura` | `admin` / `diretoria` / `representante` |
+| `status` da instituição | `em_processo_entrada`, `ativa`, `em_processo_saida`, `inativa` | `rascunho`, `aguardando_documentos`, `em_analise` (era `em_processo_entrada`), `ajustes_solicitados`, `ativa`, `em_processo_saida`, `inativa`, `desligada` |
+| `status` da reunião | — | ganhou `rascunho` (`agendada` = publicada) |
+| `POST /api/sessao`, `GET /api/sessao` | `{ id, nome, email, papel, rotuloPapel, menu }` | + `escopo`, `instituicao`, `pessoaId`, `permissoes`, `avisos`; `menu` agora é diferente por perfil |
+| `POST /api/instituicoes` | todos os campos obrigatórios | sem `status` (ou `rascunho`): só `nome` é obrigatório |
+| `PATCH /api/instituicoes/:id` | qualquer campo | representante: só a dele e só os campos de contato (o resto → `ALTERACAO_EXIGE_APROVACAO`); `status` só muda por passo válido do fluxo |
+| `POST /api/instituicoes/:id/status` | 4 situações livres | fluxo com transições; `→ ativa` exige `aprovar`; `desligada` exige `motivo` |
+| `GET /api/reunioes`, `/api/reunioes/:id` | toda reunião | só `natureza = reuniao` (eventos em `/api/eventos`) |
+| `GET /api/reunioes/:id` | `checkin.token` sempre | `checkin.token` e `checkin.url` só para a gestão; + `checkin.aberto`, `encaminhamentos`, campos novos |
+| `POST /api/reunioes/:id/encerrar` | ausente para todo vínculo | idem quando `contaParticipacao`; senão, só para quem foi **convidado** |
+| `POST /api/reunioes/:id/presencas` | gestor e admin | idem; representante recebe `ALTERACAO_EXIGE_APROVACAO` (pedir `correcao_presenca`) |
+| `GET /api/indicadores` | mesma forma para todos | gestão: `{ escopo: 'tudo', cartoes, ... }` (+ `eventosRealizados`, `solicitacoesPendentes`); representante: `{ escopo: 'instituicao', geral, minhaInstituicao, proximasReunioes }` |
+| `GET /api/dominios` | tipos, áreas, status | + `vertentes`, `gruposTrabalho`, `tiposAtividade`, `tiposRepresentacao`, `statusReuniao`, `modalidades`, `tiposSolicitacao`, `tiposDocumento` |
+| `POST /api/checkin/:token` | `{ pessoaId }` ou `{ convidado }` | + `{ proprio: true }` (logado), e em todos `modo` e `assinar` |
+| `GET /api/checkin/:token` | dados da reunião | + `voce` (se logado e ligado a uma pessoa), `permiteConvidado`, `vagasRestantes`, `natureza`, `tipo`, `modalidade` |
+| `POST /api/documentos` | instituição **ou** reunião | + `visibilidade` (`interno`/`membros`/`publico`), `substituiId` (nova versão); sem dono só se `publico`; representante só na própria instituição |
+
+## Campos novos
+
+**Instituição** (`POST`/`PATCH /api/instituicoes`, `PATCH /api/minha-instituicao`):
+`razaoSocial`, `nomeFantasia`, `vertenteId`, `grupoTrabalhoIds: number[]`,
+`redesSociais: { instagram, linkedin, facebook, youtube, x, outro }` (só https),
+`contatosComunicacao: [{ nome, email, telefone, funcao }]`, `autorizaDivulgacao`,
+`autorizaLogo`, `motivoSaida`, `substituidaPorId`. O detalhe devolve ainda
+`dataIngressoForum`, `logo { url }`, `titular`, `suplente`, `historicoStatus[]`,
+`solicitacoes { pendentes, total }` e `pendencias { completo, itens[] }`.
+
+**Representante** (`POST /api/representantes` → `vinculo`, `POST /api/vinculos`):
+`tipoRepresentacao` (`titular` | `suplente` | `integrante` | `convidado`),
+`cargoForum`, `oficioDocumentoId`, `grupoTrabalhoIds`; na pessoa,
+`autorizaComunicacao`. Encerrar vínculo aceita `motivo`.
+
+**Reunião / evento** (`POST`/`PATCH /api/reunioes` e `/api/eventos`):
+`status` (`rascunho` | `agendada`), `tipoAtividadeId`, `numero`, `modalidade`
+(`presencial` | `online` | `hibrida`), `responsavel`, `publicoAlvo`,
+`limiteParticipantes`, `contaParticipacao`, `permiteConvidado`, `exibirPublico`,
+`grupoTrabalhoId`; de evento: `organizacaoResponsavel`, `eventoProprio`,
+`inscricaoUrl`, `totalParticipantesExterno`. Sem `contaParticipacao`, vale o
+padrão do tipo (ordinária e extraordinária contam; evento não).
+
+## Rotas novas
+
+### Área da instituição (representante)
+
+| Rota | Faz |
+|---|---|
+| `GET /api/minha-instituicao` | A ficha completa da instituição da conta (mesma forma de `GET /api/instituicoes/:id`) |
+| `PATCH /api/minha-instituicao` | Atualiza os campos livres; campo sensível → `403 ALTERACAO_EXIGE_APROVACAO` com `campos` e `tipoSolicitacao` |
+| `POST /api/minha-instituicao/enviar-analise` | Rascunho / aguardando documentos / ajustes → `em_analise`. Com pendência: `422 DADOS_INVALIDOS` + `pendencias[]` |
+| `GET /api/minha-instituicao/atividades?natureza=&de=&ate=` | Reuniões e eventos da instituição, com quem foi, + `participacaoOficial` |
+| `POST /api/instituicoes/:id/logo` | multipart, campo `arquivo` (PNG/JPEG/WebP, até 2 MB). Representante: só a dele |
+| `GET /api/instituicoes/:id/logo` | A imagem (para `<img src>`, com cookie) |
+
+### Solicitações
+
+| Rota | Faz |
+|---|---|
+| `GET /api/solicitacoes?status=&tipo=&instituicaoId=` | Gestão: todas; representante: as da instituição |
+| `POST /api/solicitacoes` | `{ tipo, dados, justificativa?, documentoId?, instituicaoId? }` |
+| `GET /api/solicitacoes/:id` | Com `comparacao` (antes/depois) e `ocupanteAtual` (troca de titular/suplente) |
+| `POST /api/solicitacoes/:id/decisao` | `{ decisao: 'aprovar' \| 'recusar', resposta }` — aprovar **aplica** a mudança na mesma transação. Recusar exige `resposta` |
+| `POST /api/solicitacoes/:id/cancelar` | O representante cancela a própria, enquanto pendente |
+
+`dados` por tipo:
+
+| `tipo` | `dados` | Aprovar faz |
+|---|---|---|
+| `alterar_dados` | `{ campos: { nome, razaoSocial, nomeFantasia, cnpj, dataFundacao, tipoInstituicaoId, areaAtuacaoId, vertenteId, grupoTrabalhoIds } }` (ao menos um) | Atualiza a instituição |
+| `troca_titular`, `troca_suplente` | `{ pessoaId }` **ou** `{ pessoa: { nome, cpf, email, telefone } }`, `cargo`, `dataInicio`, `anterior: 'encerrar' \| 'manter_como_integrante'`, `motivo` | Encerra (ou rebaixa) o atual e cria/ajusta o vínculo do novo, com o ofício (`documentoId`) |
+| `incluir_representante` | idem + `tipoRepresentacao: 'integrante' \| 'convidado'` | Cria o vínculo |
+| `remover_representante` | `{ vinculoId, motivo, dataFim? }` | Encerra o vínculo |
+| `novo_oficio` | `{ descricao? }` + `documentoId` obrigatório | Marca o ofício como vigente (o anterior vira versão antiga) |
+| `entrada_forum` | `{}` | Situação → `ativa` |
+| `saida_forum` | `{ motivo, dataSaida? }` | Situação → `desligada` |
+| `correcao_presenca` | `{ reuniaoId, pessoaId, status, observacoes }` | Marca a presença (quem aprovou fica em `registradoPor`) |
+
+### Eventos (mesmas regras de reunião)
+
+`GET/POST /api/eventos`, `GET/PATCH/DELETE /api/eventos/:id`, e
+`/api/eventos/:id/{status,encerrar,convites,participantes,presencas,credenciamento,encaminhamentos}`
+— idênticas às de `/api/reunioes/:id/...`.
+
+### Credenciamento, encaminhamentos, convocação
+
+| Rota | Faz |
+|---|---|
+| `POST /api/reunioes/:id/credenciamento` | `{ acao: 'abrir' \| 'fechar' \| 'novo_qr', permiteConvidado? }`. Abrir passa a reunião a `em_andamento`; `novo_qr` invalida o QR anterior. Devolve `token` e `url` do QR |
+| `GET/POST /api/reunioes/:id/encaminhamentos` | `{ descricao, responsavel, responsavelInstituicaoId, prazo, status }` |
+| `PATCH/DELETE /api/encaminhamentos/:id` | Concluir sem data grava hoje |
+| `POST /api/reunioes/:id/convites` | + `{ instituicaoIds: [...], apenasTitulares? }` — "instituições convocadas" |
+
+### Exportação
+
+| Rota | Faz |
+|---|---|
+| `GET /api/reunioes/:id/participantes?formato=csv` | Lista de presença em CSV para o Excel (BOM UTF-8, `;`, proteção contra fórmula) |
+| `GET /api/relatorios/participacao?de=&ate=&vertenteId=&formato=csv` | Percentual por instituição (regra única, ver resposta `regra`). Representante: só a dele |
+
+O PDF continua sendo montado no front, a partir do JSON destas rotas.
+
+### Contas, listas e configurações
+
+| Rota | Quem | Faz |
+|---|---|---|
+| `GET/POST /api/usuarios` | admin | Lista e cria. `{ nome, email, papel, instituicaoId?, pessoaId? }`; envia o link de primeiro acesso |
+| `PATCH /api/usuarios/:id` | admin | Perfil, instituição, pessoa, `ativo`. Não há DELETE |
+| `POST /api/usuarios/:id/convite` | admin | Reenvia o link |
+| `POST /api/dominios` | gestão | `{ lista: 'vertentes' \| 'gruposTrabalho' \| 'tiposInstituicao' \| 'areasAtuacao' \| 'tiposAtividade', id?, nome, ... , ativo }` |
+| `PATCH /api/vinculos/:id` | gestão | `tipoRepresentacao`, `cargo`, `cargoForum`, `grupoTrabalhoIds`, `oficioDocumentoId` |
+| `GET /api/configuracoes` | gestão | Links do painel |
+| `PATCH /api/configuracoes` | admin | `{ link_manifestacao_interesse, linktree, canais_oficiais: [{ nome, url }] }` |
+
+### Painel público (sem login, limite de 120/min por IP)
+
+| Rota | Devolve |
+|---|---|
+| `GET /api/publico` | `indicadores`, `diretoria`, `proximasAtividades`, `linkManifestacaoInteresse`, `linktree`, `canaisOficiais` |
+| `GET /api/publico/instituicoes?tipo=&vertente=&area=&busca=` | Só ativas que autorizaram a divulgação; + `filtros` (opções dos selects) |
+| `GET /api/publico/instituicoes/:id/logo` | A logo, se autorizada (cache público de 1 h) |
+| `GET /api/publico/agenda?de=&ate=` | Reuniões e eventos com `exibirPublico` |
+| `GET /api/publico/documentos` | Documentos com `visibilidade = publico` (só a versão vigente) |
+| `GET /api/publico/documentos/:id` | Download |
+
+## Códigos de erro acrescentados
+
+| Código | HTTP | Quando |
+|---|---|---|
+| `ALTERACAO_EXIGE_APROVACAO` | 403 | Representante tentou mudar direto o que precisa de solicitação. Vem com `campos`, `acaoSugerida` e `tipoSolicitacao` |
+| `TRANSICAO_INVALIDA` | 409 | Passo de situação fora do fluxo (vem `permitidas`) |
+| `SOLICITACAO_JA_DECIDIDA` | 409 | Decidir/cancelar solicitação que já não está pendente |
+| `REPRESENTACAO_DUPLICADA` | 409 | Segundo titular (ou suplente) vigente |
+| `CONTA_SEM_INSTITUICAO` | 403 | Representante sem instituição ligada |
+| `CONVIDADO_NAO_PERMITIDO` | 403 | Check-in de convidado em atividade que não aceita |
+| `LIMITE_ATINGIDO` | 409 | Atividade lotada |
+| `NUMERO_DUPLICADO` | 409 | Duas atividades do mesmo tipo com o mesmo número |

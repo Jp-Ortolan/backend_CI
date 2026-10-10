@@ -105,7 +105,7 @@ begin
   -- Instituição SEM vínculo e SEM presença: antes da 004 ela seria apagada e
   -- levaria os documentos junto, por cascade, sem erro nenhum.
   insert into instituicao (nome, cnpj, status)
-  values ('So Documentos', '88888888888888', 'em_processo_entrada')
+  values ('So Documentos', '88888888888888', 'em_analise')
   returning id into v_inst;
 
   insert into documento (nome, instituicao_id, storage_path)

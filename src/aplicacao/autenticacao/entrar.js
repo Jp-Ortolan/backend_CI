@@ -5,7 +5,7 @@
  */
 import { z } from 'zod';
 import { consultaUm } from '@/infraestrutura/banco/consulta.js';
-import { abrirSessao } from '@/infraestrutura/seguranca/sessao.js';
+import { abrirSessao, paraUsuarioSessao } from '@/infraestrutura/seguranca/sessao.js';
 import { conferir } from '@/infraestrutura/seguranca/senha.js';
 
 export const esquemaEntrar = z.object({
@@ -21,6 +21,8 @@ export const esquemaEntrar = z.object({
  * @property {string|null} senha_hash
  * @property {import('@/dominio/tipos.js').PapelUsuario} papel
  * @property {boolean} ativo
+ * @property {string|null} instituicao_id
+ * @property {string|null} pessoa_id
  */
 
 /**
@@ -40,7 +42,7 @@ export async function entrar({ email, senha, ip = null, agente = null }) {
 
   /** @type {Credenciais|null} */
   const u = await consultaUm(
-    'select id, nome, email, senha_hash, papel, ativo from auth_credenciais($1)',
+    'select id, nome, email, senha_hash, papel, ativo, instituicao_id, pessoa_id from auth_credenciais($1)',
     [analise.data.email],
   );
 
@@ -58,6 +60,6 @@ export async function entrar({ email, senha, ip = null, agente = null }) {
   // legível nesta requisição, então uma segunda ida ao banco seria em vão.
   return {
     ok: true,
-    usuario: { id: u.id, nome: u.nome, email: u.email, papel: u.papel, ativo: u.ativo },
+    usuario: paraUsuarioSessao(u),
   };
 }

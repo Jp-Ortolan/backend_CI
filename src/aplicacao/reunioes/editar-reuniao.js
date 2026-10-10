@@ -13,9 +13,10 @@ import { esquemaEditarReuniao, paraColunasReuniao } from './esquemas.js';
  * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao|null} usuario
  * @param {string} id
  * @param {unknown} entrada
+ * @param {'reuniao'|'evento'} [natureza]  quando vem da rota, confere se o id é mesmo daquela natureza
  */
-export async function editarReuniao(usuario, id, entrada) {
-  const u = exigir(usuario, 'reuniao', 'editar');
+export async function editarReuniao(usuario, id, entrada, natureza) {
+  const u = exigir(usuario, natureza ?? 'reuniao', 'editar');
   const dados = validar(esquemaEditarReuniao, entrada ?? {});
 
   const colunas = paraColunasReuniao(dados);
@@ -23,26 +24,52 @@ export async function editarReuniao(usuario, id, entrada) {
     throw new ErroDeNegocio('DADOS_INVALIDOS', 'Nenhum campo foi enviado para alteração.');
   }
 
-  const campos = Object.keys(colunas);
-  const atribuicoes = campos.map((c, n) => `${c} = $${n + 2}`);
-
   return comUsuario(u.id, async (tx) => {
     const atual = await tx.consultaUm(
-      'select id, status, data from reuniao where id = $1', [id],
+      'select id, status, data, natureza from reuniao where id = $1', [id],
     );
-    if (!atual) throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA', 'Reunião não encontrada.');
+    if (!atual || (natureza && atual.natureza !== natureza)) {
+      throw new ErroDeNegocio('REUNIAO_NAO_ENCONTRADA',
+        natureza === 'evento' ? 'Evento não encontrado.' : 'Reunião não encontrada.');
+    }
+
+    if ('tipo_atividade_id' in colunas && colunas.tipo_atividade_id) {
+      const tipo = await tx.consultaUm(
+        'select natureza from tipo_atividade where id = $1', [colunas.tipo_atividade_id]);
+      if (!tipo || tipo.natureza !== atual.natureza) {
+        throw new ErroDeNegocio('DADOS_INVALIDOS', 'Tipo de atividade de outra natureza.',
+          { campos: [{ campo: 'tipoAtividadeId', mensagem: 'Tipo de outra natureza.' }] });
+      }
+    }
+
+    // 'status' pelo PATCH só serve para publicar o rascunho; o resto passa pela
+    // rota de situação, que tem as transições.
+    if ('status' in colunas && colunas.status !== atual.status
+      && !(atual.status === 'rascunho' && colunas.status === 'agendada')) {
+      throw new ErroDeNegocio('DADOS_INVALIDOS',
+        'A situação muda pela rota de situação (POST /status) ou pelo encerramento.');
+    }
+    if ('status' in colunas && colunas.status === atual.status) delete colunas.status;
 
 // Reunião encerrada já fechou o denominador dos indicadores: mudar a data agora
 // reescreveria participação passada.
-    if (atual.status === 'encerrada' && ('data' in colunas || 'hora_inicio' in colunas)) {
+    if (atual.status === 'encerrada'
+      && ('data' in colunas || 'hora_inicio' in colunas || 'conta_participacao' in colunas)) {
       throw new ErroDeNegocio('DADOS_INVALIDOS',
-        'A reunião já foi encerrada. Data e horário não podem mais mudar, '
-        + 'porque os indicadores de participação já foram calculados sobre eles.');
+        'A reunião já foi encerrada. Data, horário e "conta para o percentual" não '
+        + 'podem mais mudar, porque os indicadores de participação já foram '
+        + 'calculados sobre eles.');
     }
     if (atual.status === 'cancelada') {
       throw new ErroDeNegocio('REUNIAO_CANCELADA',
         'Esta reunião foi cancelada. Reative-a antes de editar.');
     }
+
+    const campos = Object.keys(colunas);
+    if (!campos.length) {
+      throw new ErroDeNegocio('DADOS_INVALIDOS', 'Nenhum campo foi enviado para alteração.');
+    }
+    const atribuicoes = campos.map((c, n) => `${c} = $${n + 2}`);
 
     let linha;
     try {

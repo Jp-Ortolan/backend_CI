@@ -30,6 +30,7 @@ const objetoRepresentante = z.object({
     .transform((v) => (v ? apenasDigitos(v) : null))
     .refine((v) => v === null || cpfValido(v), 'CPF inválido.'),
   observacoes: z.string().trim().max(2000).transform((v) => (v || null)),
+  autorizaComunicacao: z.boolean(),
 });
 
 export const esquemaEditarRepresentante = objetoRepresentante.partial();
@@ -50,6 +51,7 @@ export async function editarRepresentante(usuario, id, entrada) {
   if ('telefone' in dados) colunas.telefone = dados.telefone;
   if ('cpf' in dados) colunas.cpf = dados.cpf;
   if ('observacoes' in dados) colunas.observacoes = dados.observacoes;
+  if ('autorizaComunicacao' in dados) colunas.autoriza_comunicacao = dados.autorizaComunicacao;
 
   if (Object.keys(colunas).length === 0) {
     throw new ErroDeNegocio('DADOS_INVALIDOS', 'Nenhum campo foi enviado para alteração.');

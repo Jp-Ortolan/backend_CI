@@ -11,17 +11,19 @@
 -- ------------------------------------------------------------------ usuários
 -- A senha de todos os usuários de exemplo é: senha123456
 -- (hash Argon2id — o banco nunca vê a senha em texto puro)
+-- Um acesso de cada perfil do Fórum. O do representante é ligado à instituição
+-- logo abaixo, depois que ela existe.
 insert into usuario (id, nome, email, papel, senha_hash) values
-  ('11111111-1111-1111-1111-111111111111', 'Ana Gestora',   'ana@centroinovacao.br',   'admin',   '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw'),
-  ('11111111-1111-1111-1111-111111111112', 'Bruno Leitura', 'bruno@centroinovacao.br', 'leitura', '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw'),
-  ('11111111-1111-1111-1111-111111111113', 'Carla Gestora', 'carla@centroinovacao.br', 'gestor',  '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw');
+  ('11111111-1111-1111-1111-111111111111', 'Ana Administradora', 'ana@centroinovacao.br',   'admin',         '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw'),
+  ('11111111-1111-1111-1111-111111111112', 'Bruno Representante','bruno@centroinovacao.br', 'representante', '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw'),
+  ('11111111-1111-1111-1111-111111111113', 'Carla Diretoria',    'carla@centroinovacao.br', 'diretoria',     '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw');
 
 -- -------------------------------------------------------------- instituições
 insert into instituicao (id, nome, cnpj, tipo_instituicao_id, cidade, uf, status, data_entrada, updated_by) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'Universidade Alfa',    '11111111111111', 1, 'Campo Grande', 'MS', 'ativa',              '2019-03-01', '11111111-1111-1111-1111-111111111111'),
   ('aaaaaaaa-0000-0000-0000-000000000002', 'Startup Beta',         '22222222222222', 3, 'Campo Grande', 'MS', 'ativa',              '2025-06-01', '11111111-1111-1111-1111-111111111111'),
   ('aaaaaaaa-0000-0000-0000-000000000003', 'Prefeitura Municipal', '33333333333333', 5, 'Campo Grande', 'MS', 'ativa',              '2019-03-01', '11111111-1111-1111-1111-111111111111'),
-  ('aaaaaaaa-0000-0000-0000-000000000004', 'Instituto Gama',       '44444444444444', 2, 'Dourados',     'MS', 'em_processo_entrada', null,        '11111111-1111-1111-1111-111111111111');
+  ('aaaaaaaa-0000-0000-0000-000000000004', 'Instituto Gama',       '44444444444444', 2, 'Dourados',     'MS', 'em_analise', null,        '11111111-1111-1111-1111-111111111111');
 
 -- instituição que saiu do ecossistema
 insert into instituicao (id, nome, cnpj, tipo_instituicao_id, cidade, uf, status, data_entrada, data_saida, updated_by) values
@@ -49,12 +51,57 @@ insert into vinculo (id, pessoa_id, instituicao_id, cargo, status, data_inicio) 
   ('cccccccc-0000-0000-0000-000000000004', 'bbbbbbbb-0000-0000-0000-000000000003',
    'aaaaaaaa-0000-0000-0000-000000000003', 'Secretário de Inovação', 'ativo', '2023-01-10');
 
+-- ------------------------------------------- representação e acesso da instituição
+-- Marina é a titular da Universidade Alfa; Carlos, da Prefeitura (e preside o
+-- Fórum: é ele que aparece na composição da Diretoria do painel público).
+update vinculo set tipo_representacao = 'titular'
+ where id in ('cccccccc-0000-0000-0000-000000000002',
+              'cccccccc-0000-0000-0000-000000000003',
+              'cccccccc-0000-0000-0000-000000000004');
+update vinculo set cargo_forum = 'Presidente' where id = 'cccccccc-0000-0000-0000-000000000004';
+
+-- Bruno é o acesso da Universidade Alfa: entra e vê a instituição dele.
+update usuario set instituicao_id = 'aaaaaaaa-0000-0000-0000-000000000001'
+ where id = '11111111-1111-1111-1111-111111111112';
+
+-- Marina tem acesso próprio, ligado à pessoa dela: é quem faz "minha presença".
+insert into usuario (id, nome, email, papel, senha_hash, instituicao_id, pessoa_id) values
+  ('11111111-1111-1111-1111-111111111114', 'Marina Gonçalves', 'marina@alfa.br', 'representante',
+   '$argon2id$v=19$m=19456,t=2,p=1$VuCNQ3Gkqb/O19nORm+0Qg$+To+3Te2b/kRXtRdI8hWrPQ0t2GoZhHdW6GlNwRedsw',
+   'aaaaaaaa-0000-0000-0000-000000000001', 'bbbbbbbb-0000-0000-0000-000000000002');
+
+-- Três das quatro ativas autorizaram aparecer no painel público.
+update instituicao set autoriza_divulgacao = true
+ where id in ('aaaaaaaa-0000-0000-0000-000000000001',
+              'aaaaaaaa-0000-0000-0000-000000000002',
+              'aaaaaaaa-0000-0000-0000-000000000003');
+
 -- -------------------------------------------------------------------- reuniões
 insert into reuniao (id, titulo, data, hora_inicio, local, status, created_by) values
   ('dddddddd-0000-0000-0000-000000000001', 'Reunião Ordinária — Março/2025',    '2025-03-10', '09:00', 'Auditório do Centro', 'encerrada', '11111111-1111-1111-1111-111111111111'),
   ('dddddddd-0000-0000-0000-000000000002', 'Reunião Ordinária — Agosto/2025',   '2025-08-10', '09:00', 'Auditório do Centro', 'encerrada', '11111111-1111-1111-1111-111111111111'),
   ('dddddddd-0000-0000-0000-000000000003', 'Reunião Ordinária — Setembro/2025', '2025-09-10', '09:00', 'Auditório do Centro', 'encerrada', '11111111-1111-1111-1111-111111111111'),
   ('dddddddd-0000-0000-0000-000000000004', 'Reunião Ordinária — Setembro/2026', '2026-09-18', '09:00', 'Auditório do Centro', 'agendada',  '11111111-1111-1111-1111-111111111111');
+
+-- As quatro são ordinárias e numeradas; a próxima aparece no calendário público.
+update reuniao r
+   set tipo_atividade_id = (select id from tipo_atividade where nome = 'Reunião ordinária'),
+       numero = x.n
+  from (values ('dddddddd-0000-0000-0000-000000000001'::uuid, 65),
+               ('dddddddd-0000-0000-0000-000000000002'::uuid, 66),
+               ('dddddddd-0000-0000-0000-000000000003'::uuid, 67),
+               ('dddddddd-0000-0000-0000-000000000004'::uuid, 68)) as x(id, n)
+ where r.id = x.id;
+update reuniao set exibir_publico = true where id = 'dddddddd-0000-0000-0000-000000000004';
+
+-- Um evento, para a agenda não ser só de reuniões. Não conta no percentual.
+insert into reuniao (id, titulo, natureza, tipo_atividade_id, data, hora_inicio, local,
+                     status, conta_participacao, exibir_publico, organizacao_responsavel,
+                     created_by) values
+  ('dddddddd-0000-0000-0000-000000000005', 'Workshop de Propriedade Intelectual', 'evento',
+   (select id from tipo_atividade where nome = 'Workshop'), '2026-11-12', '14:00',
+   'Sala de Reuniões 1', 'agendada', false, true, 'Centro de Inovação',
+   '11111111-1111-1111-1111-111111111111');
 
 -- ------------------------------------------------------------------- presenças
 -- REPARE nas colunas de snapshot: em março/2025 o José marcou presença

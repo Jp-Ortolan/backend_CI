@@ -140,7 +140,7 @@ export function conteudoBateComTipo(conteudo, mime) {
  * Monta a chave do arquivo no armazenamento.
  * O id no meio evita colisão de nomes iguais e impede adivinhar o caminho.
  *
- * @param {'instituicao'|'reuniao'} dono
+ * @param {'instituicao'|'reuniao'|'forum'} dono  'forum' = documento público sem dono
  * @param {string} donoId
  * @param {string} documentoId
  * @param {string} nomeArquivo

@@ -25,9 +25,10 @@ automatizar o registro de participação por QR Code.
 
 | | |
 |---|---|
-| **Endpoints** | 24 rotas sob `/api` |
-| **Migrations** | 5, aplicadas em ordem |
-| **Testes** | **210** — 82 de banco, 32 de domínio, 96 de integração |
+| **Endpoints** | 59 arquivos de rota sob `/api` (6 do painel público, sem login) |
+| **Migrations** | 11, aplicadas em ordem |
+| **Testes** | **297** — 120 de banco, 47 de domínio, 130 de integração |
+| **Última revisão** | Outubro/2026 — perfis do Fórum, eventos, QR e painel público ([o que mudou](docs/12-revisao-outubro.md)) |
 | **Casos de teste (QA)** | 62, em [`qa/02-casos-de-teste.csv`](qa/02-casos-de-teste.csv) |
 | **Verificação de saúde** | `GET /api/saude` — responde `{"status":"ok"}` |
 | **Aplicação no ar** | ainda não publicada — o passo está em [`docs/03-ambientes.md`](docs/03-ambientes.md) |
@@ -72,7 +73,8 @@ para `.env.local` (`cp .env.example .env.local`) e suba a aplicação:
 npm run dev                   # http://localhost:3000
 ```
 
-O seed cria um acesso de cada perfil — administrador, gestor e consulta. Os
+O seed cria um acesso de cada perfil — administrador, Diretoria e dois
+representantes da Universidade Alfa. Os
 e-mails e a senha estão em [`banco/seed.sql`](banco/seed.sql); valem só em banco
 local. Entre com cada um (`POST /api/sessao`) para ver o `menu` da resposta
 mudar — é a matriz de permissões funcionando.
@@ -91,10 +93,16 @@ backend_CI/
 │   │   └── api/                    #    27 rotas REST (não há telas: só back-end)
 │   ├── middleware.js               # CORS + exige sessão fora das rotas públicas
 │   ├── aplicacao/                  # ② Casos de uso — uma ação por arquivo
-│   │   ├── autenticacao/           #    entrar, recuperar senha
+│   │   ├── autenticacao/           #    entrar, perfil, recuperar senha, convite
+│   │   ├── usuarios/               #    contas e permissões (admin)
+│   │   ├── solicitacoes/           #    pedido → aprovação → aplica a mudança
+│   │   ├── minha-instituicao/      #    área da instituição do representante
+│   │   ├── publico/                #    painel público, sem login
+│   │   ├── relatorios/             #    participação e exportação CSV
+│   │   ├── encaminhamentos/        #    o que a reunião decidiu
 │   │   ├── instituicoes/           #    CRUD, busca, status, histórico
 │   │   ├── representantes/         #    CRUD e vínculos
-│   │   ├── reunioes/               #    CRUD, encerrar, status
+│   │   ├── reunioes/               #    reuniões E eventos, encerrar, credenciamento
 │   │   ├── convites/               #    convidar, responder, participantes
 │   │   ├── presencas/              #    marcação manual
 │   │   ├── checkin/                #    fluxo público do QR Code
@@ -115,17 +123,23 @@ backend_CI/
 │       ├── observabilidade/        #    log estruturado em JSON
 │       └── email/                  #    envio (imprime no terminal sem provedor)
 ├── banco/
-│   ├── migrations/                 # 5 migrations versionadas, aplicadas em ordem
+│   ├── migrations/                 # 11 migrations versionadas, aplicadas em ordem
 │   │   ├── 001_estrutura_inicial.sql
 │   │   ├── 002_alinhamento_telas.sql
 │   │   ├── 003_protege_reuniao.sql
 │   │   ├── 004_documentos.sql
-│   │   └── 005_protecao_checkin.sql
+│   │   ├── 005_protecao_checkin.sql
+│   │   ├── 006_campos_das_telas.sql
+│   │   ├── 007_valores_de_enum.sql      # perfis e situações do Fórum
+│   │   ├── 008_perfis_e_acesso.sql      # RLS por instituição, guardas
+│   │   ├── 009_cadastro_forum.sql       # vertente, GTs, titular/suplente, solicitações
+│   │   ├── 010_reunioes_e_eventos.sql   # evento, credenciamento, check-in v2
+│   │   └── 011_painel_publico.sql       # funções publico_*
 │   └── seed.sql                    # dados de exemplo para desenvolver
 ├── testes/
-│   ├── banco/                      # 82 testes de regra, acesso e indicador, em SQL
-│   ├── dominio/                    # 32 testes de regra pura
-│   └── integracao/                 # 96 testes contra um Postgres de verdade
+│   ├── banco/                      # 120 testes de regra, acesso e indicador, em SQL
+│   ├── dominio/                    # 47 testes de regra pura
+│   └── integracao/                 # 130 testes contra um Postgres de verdade
 ├── scripts/                        # migrar, resetar, testar, backup, restaurar
 ├── docs/                           # arquitetura, ambientes, API, permissões
 ├── qa/                             # plano de testes, 62 casos, registro de execução
@@ -169,10 +183,11 @@ O detalhe arquivo por arquivo está em
 
 | Módulo | Tabelas principais |
 |---|---|
-| Autenticação | `usuario`, `sessao`, `token_recuperacao` |
+| Autenticação e contas | `usuario`, `sessao`, `token_recuperacao` |
 | Instituições | `instituicao`, `area_atuacao` |
 | Representantes e vínculos | `representante`, `vinculo` |
-| Reuniões | `reuniao`, `reuniao_convite` |
+| Reuniões e eventos | `reuniao` (com `natureza`), `tipo_atividade`, `reuniao_convite`, `encaminhamento` |
+| Fórum | `vertente`, `grupo_trabalho`, `solicitacao`, `configuracao` |
 | Presenças e check-in | `presenca`, `checkin_tentativa` |
 | Documentos | `documento`, `documento_conteudo` |
 | Indicadores | views `vw_*` |
@@ -182,10 +197,10 @@ O detalhe arquivo por arquivo está em
 
 | Perfil | Permissões |
 |---|---|
-| `admin` | Acesso total, inclusive exclusão e auditoria |
-| `gestor` | Cadastra e edita instituições, reuniões e documentos |
-| `leitura` | Só consulta — não cria, não edita, não exclui |
-| *(público)* | Apenas o check-in por QR Code, com limite por IP |
+| `admin` | Administrador geral: tudo, inclusive contas, configurações e exclusão |
+| `diretoria` | Cadastra, aprova, cria reuniões e eventos, corrige presença. Não exclui, não mexe em contas |
+| `representante` | Conta **de uma instituição**: consulta o Fórum, cuida dos contatos da própria instituição e pede o resto por solicitação |
+| *(público)* | Painel público (`/api/publico`) e check-in por QR Code, com limite por IP |
 
 A matriz completa está em [`docs/05-permissoes.md`](docs/05-permissoes.md), e é a
 mesma em dois lugares: em `src/dominio/permissoes.js`, para a resposta ser 403
@@ -198,11 +213,11 @@ esqueça o `exigir()`.
 |---|---|
 | `npm run dev` | Sobe a aplicação em desenvolvimento |
 | `npm run build` | Compila para produção |
-| `npm run db:testar` | Recria o banco, aplica migrations + seed e roda os 82 testes SQL |
+| `npm run db:testar` | Recria o banco, aplica migrations + seed e roda os 120 testes SQL |
 | `npm run db:migrar` | Aplica só as migrations que ainda não rodaram *(bash)* |
 | `npm run db:resetar` | Apaga e recria o banco local *(bash; recusa fora de localhost)* |
-| `npm run test:dominio` | 32 testes de regra pura — não precisam de banco |
-| `npm run test:integracao` | 96 testes contra um Postgres de verdade |
+| `npm run test:dominio` | 47 testes de regra pura — não precisam de banco |
+| `npm run test:integracao` | 130 testes contra um Postgres de verdade |
 | `npm test` | Domínio + integração |
 | `npm run lint` | ESLint |
 
@@ -246,7 +261,7 @@ export async function comUsuario(usuarioId, acao) { ... }
 
 Isso é comentário — o Node ignora. Mas o VS Code lê e passa a completar nomes e
 avisar quando algo está escrito errado (um papel `"gerente"` onde só existe
-`admin`, `gestor` ou `leitura`, por exemplo). O `jsconfig.json` na raiz é o que
+`admin`, `diretoria` ou `representante`, por exemplo). O `jsconfig.json` na raiz é o que
 liga essa verificação; apagá-lo não quebra nada, só tira o aviso.
 
 Os tipos das tabelas ficam em [`src/dominio/tipos.js`](src/dominio/tipos.js),
@@ -255,10 +270,10 @@ também como JSDoc.
 ## Mexer no banco
 
 Crie o próximo arquivo numerado em `banco/migrations/` — hoje a última é a
-`005_protecao_checkin.sql`, então a próxima é a `006_*.sql` — e rode:
+`011_painel_publico.sql`, então a próxima é a `012_*.sql` — e rode:
 
 ```bash
-npm run db:testar        # recria do zero e roda os 82 testes SQL
+npm run db:testar        # recria do zero e roda os 120 testes SQL
 ```
 
 **Nunca edite uma migration já aplicada em outro ambiente.** O script guarda numa
@@ -277,6 +292,7 @@ um estado diferente, e a diferença só aparece em produção.
 | [Perfis de acesso](docs/05-permissoes.md) | Todos |
 | [Alinhamento com o front](docs/07-alinhamento-modelo-front.md) | Back-end e Front-end |
 | [Replanejamento de setembro](docs/08-replanejamento-setembro.md) | Todos |
+| [Revisão de outubro: perfis, eventos, QR, painel público](docs/12-revisao-outubro.md) | Todos — **o que mudou e o que falta no front** |
 | [Operação: log, saúde, backup](docs/09-operacao.md) | DevOps |
 | [Plano de testes](qa/01-plano-de-testes.md) | QA |
 | [Casos de teste](qa/02-casos-de-teste.md) | QA |

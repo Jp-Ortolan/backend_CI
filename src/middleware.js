@@ -21,6 +21,9 @@ const ROTAS_PUBLICAS = [
   // Entrar e recuperar senha: são elas que criam a sessão.
   '/api/sessao',
   '/api/senha',
+  // Painel público (revisão de outubro): sem login, só dado agregado ou
+  // autorizado. Quem recorta são as funções publico_* do banco (migration 011).
+  '/api/publico',
 ];
 
 /**

@@ -17,7 +17,10 @@
  *   |'REUNIAO_COM_PRESENCA'|'REUNIAO_COM_DOCUMENTO'|'CONVITE_DUPLICADO'
  *   |'INSTITUICAO_COM_DOCUMENTO'|'ARQUIVO_GRANDE_DEMAIS'|'TIPO_NAO_PERMITIDO'
  *   |'DOCUMENTO_E_LINK'
- *   |'DATA_SAIDA_OBRIGATORIA'} CodigoErro
+ *   |'DATA_SAIDA_OBRIGATORIA'
+ *   |'ALTERACAO_EXIGE_APROVACAO'|'TRANSICAO_INVALIDA'|'SOLICITACAO_JA_DECIDIDA'
+ *   |'REPRESENTACAO_DUPLICADA'|'CONTA_SEM_INSTITUICAO'|'CONVIDADO_NAO_PERMITIDO'
+ *   |'LIMITE_ATINGIDO'|'NUMERO_DUPLICADO'} CodigoErro
  */
 
 /** @type {Record<CodigoErro, number>} */
@@ -61,6 +64,22 @@ const HTTP = {
 
 // Documento que é só link não tem conteúdo para baixar: a tela chamou a rota errada.
   DOCUMENTO_E_LINK:            409,
+
+  // ------------------------------------------ revisão de outubro (perfis do Fórum)
+// O representante tentou mudar direto o que precisa de aprovação: a resposta
+// leva a dica de abrir uma solicitação. 403 porque é o perfil que não pode.
+  ALTERACAO_EXIGE_APROVACAO:   403,
+// A situação pedida não é um passo válido a partir da atual (ex.: aprovar
+// instituição que nem foi enviada para análise).
+  TRANSICAO_INVALIDA:          409,
+  SOLICITACAO_JA_DECIDIDA:     409,
+// Segundo titular (ou suplente) vigente na mesma instituição.
+  REPRESENTACAO_DUPLICADA:     409,
+// Conta de representante que o admin ainda não ligou a uma instituição.
+  CONTA_SEM_INSTITUICAO:       403,
+  CONVIDADO_NAO_PERMITIDO:     403,
+  LIMITE_ATINGIDO:             409,
+  NUMERO_DUPLICADO:            409,
 };
 
 export class ErroDeNegocio extends Error {

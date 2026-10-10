@@ -12,6 +12,8 @@ import { ErroDeNegocio } from '@/dominio/erros.js';
 export const esquemaEncerramento = z.object({
   dataFim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data no formato AAAA-MM-DD.'),
   observacoes: z.string().trim().optional(),
+  // "Motivo da substituição": fim de mandato, troca de titular, saiu da instituição...
+  motivo: z.string().trim().max(500).optional(),
 });
 
 /**
@@ -31,7 +33,7 @@ export async function encerrarVinculo(usuario, vinculoId, entrada) {
     throw new ErroDeNegocio('DADOS_INVALIDOS',
       analise.error.issues[0]?.message ?? 'Dados inválidos.');
   }
-  const { dataFim, observacoes } = analise.data;
+  const { dataFim, observacoes, motivo } = analise.data;
 
   return comUsuario(usuario.id, async (tx) => {
     const atual = await tx.consultaUm(
@@ -50,10 +52,11 @@ export async function encerrarVinculo(usuario, vinculoId, entrada) {
     const linha = await tx.consultaUm(
       `update vinculo
           set status = 'encerrado', data_fim = $2,
-              observacoes = coalesce($3, observacoes)
+              observacoes = coalesce($3, observacoes),
+              motivo_encerramento = coalesce($4, motivo_encerramento)
         where id = $1
-    returning id, status, data_fim`,
-      [vinculoId, dataFim, observacoes ?? null],
+    returning id, status, data_fim, motivo_encerramento`,
+      [vinculoId, dataFim, observacoes ?? null, motivo ?? null],
     );
 
     // Sem política de UPDATE, o PostgreSQL não levanta erro: ele simplesmente
@@ -62,6 +65,9 @@ export async function encerrarVinculo(usuario, vinculoId, entrada) {
       throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite esta alteração.');
     }
 
-    return { id: linha.id, status: linha.status, dataFim: linha.data_fim };
+    return {
+      id: linha.id, status: linha.status, dataFim: linha.data_fim,
+      motivo: linha.motivo_encerramento,
+    };
   });
 }

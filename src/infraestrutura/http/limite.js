@@ -1,6 +1,7 @@
 /**
  * Limite de requisições por IP nas rotas públicas (RNF14).
- * Só o check-in precisa: o painel já exige sessão, que é limite melhor que IP.
+ * Só as rotas sem login precisam (check-in e painel público): o painel interno
+ * já exige sessão, que é limite melhor que IP.
  * O contador mora no banco (migration 005), não em memória.
  */
 import { consultaUm } from '@/infraestrutura/banco/consulta.js';
@@ -14,6 +15,9 @@ const LIMITES = {
   buscar: { maximo: 20, janela: '1 minute' },
   registrar: { maximo: 10, janela: '1 minute' },
   consultar: { maximo: 60, janela: '1 minute' },
+  // Painel público (revisão de outubro): só dado agregado ou autorizado, mas
+  // sem login — o limite impede usar a rota como fonte para raspagem em massa.
+  publico: { maximo: 120, janela: '1 minute' },
 };
 
 /**

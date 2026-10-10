@@ -2,7 +2,11 @@
 /**
  * Cria um usuário do sistema.
  *
- *   node scripts/criar-usuario.mjs "Ana Gestora" ana@centroinovacao.br admin
+ *   node scripts/criar-usuario.mjs "Ana Admin" ana@centroinovacao.br admin
+ *   node scripts/criar-usuario.mjs "Bruno" bruno@alfa.br representante <id-da-instituição>
+ *
+ * Serve para criar o PRIMEIRO administrador. Depois dele, as contas se criam
+ * pela API (POST /api/usuarios), que manda o link de primeiro acesso por e-mail.
  *
  * A senha é pedida no terminal e não aparece na tela — passar senha por
  * argumento a deixaria gravada no histórico do shell.
@@ -14,14 +18,19 @@ import { createInterface } from 'node:readline';
 import { hash } from '@node-rs/argon2';
 import pg from 'pg';
 
-const [nome, email, papel = 'leitura'] = process.argv.slice(2);
+const [nome, email, papel = 'diretoria', instituicaoId = null] = process.argv.slice(2);
 
 if (!nome || !email) {
-  console.error('Uso: node scripts/criar-usuario.mjs "Nome Completo" email@dominio.br [admin|gestor|leitura]');
+  console.error('Uso: node scripts/criar-usuario.mjs "Nome Completo" email@dominio.br '
+    + '[admin|diretoria|representante] [id-da-instituição]');
   process.exit(1);
 }
-if (!['admin', 'gestor', 'leitura'].includes(papel)) {
-  console.error(`Papel inválido: ${papel}. Use admin, gestor ou leitura.`);
+if (!['admin', 'diretoria', 'representante'].includes(papel)) {
+  console.error(`Papel inválido: ${papel}. Use admin, diretoria ou representante.`);
+  process.exit(1);
+}
+if (papel === 'representante' && !instituicaoId) {
+  console.error('Conta de representante precisa do id da instituição (4º argumento).');
   process.exit(1);
 }
 
@@ -88,13 +97,14 @@ const cliente = new pg.Client({ connectionString: url, ssl: configSsl(url) });
 await cliente.connect();
 try {
   const { rows } = await cliente.query(
-    `insert into usuario (nome, email, papel, senha_hash)
-     values ($1, lower(trim($2)), $3, $4)
+    `insert into usuario (nome, email, papel, senha_hash, instituicao_id)
+     values ($1, lower(trim($2)), $3, $4, $5)
      on conflict (email) do update
         set nome = excluded.nome, papel = excluded.papel,
-            senha_hash = excluded.senha_hash, ativo = true
+            senha_hash = excluded.senha_hash, ativo = true,
+            instituicao_id = excluded.instituicao_id
      returning id, nome, email, papel`,
-    [nome, email, papel, senhaHash],
+    [nome, email, papel, senhaHash, papel === 'representante' ? instituicaoId : null],
   );
   const u = rows[0];
   console.log(`\nUsuário pronto: ${u.nome} <${u.email}> — perfil ${u.papel}`);

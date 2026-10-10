@@ -19,7 +19,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(_req, { params }) {
   try {
-    return ok(await obterReuniao(await usuarioAtual(), params.id));
+    return ok(await obterReuniao(await usuarioAtual(), params.id, 'reuniao'));
   } catch (e) {
     return falha(e);
   }
@@ -33,7 +33,7 @@ export async function PATCH(req, { params }) {
   try {
     const usuario = await usuarioAtual();
     const corpo = await req.json().catch(() => null);
-    return ok(await editarReuniao(usuario, params.id, corpo));
+    return ok(await editarReuniao(usuario, params.id, corpo, 'reuniao'));
   } catch (e) {
     return falha(e);
   }
@@ -45,7 +45,7 @@ export async function PATCH(req, { params }) {
  */
 export async function DELETE(_req, { params }) {
   try {
-    return ok(await excluirReuniao(await usuarioAtual(), params.id));
+    return ok(await excluirReuniao(await usuarioAtual(), params.id, 'reuniao'));
   } catch (e) {
     return falha(e);
   }

@@ -63,6 +63,43 @@ export async function pedirRecuperacao({ email }) {
   };
 }
 
+/** Validade do link de primeiro acesso: quem recebe o convite pode demorar. */
+export const DURACAO_CONVITE_HORAS = 72;
+
+/**
+ * Convite de primeiro acesso: o administrador criou a conta, e a pessoa recebe
+ * o link para escolher a senha. É o mesmo token da recuperação (a senha nunca
+ * é escolhida nem vista pelo administrador), só com validade maior e outro texto.
+ *
+ * @param {{ email: string, nome: string, perfil: string, instituicao?: string|null }} dados
+ * @returns {Promise<void>}
+ */
+export async function enviarConvite({ email, nome, perfil, instituicao = null }) {
+  const token = gerarToken();
+  const expira = new Date(Date.now() + DURACAO_CONVITE_HORAS * 3600_000);
+
+  await consulta('select auth_criar_token_recuperacao($1, $2, $3)', [
+    email, hashToken(token), expira.toISOString(),
+  ]);
+
+  const base = urlDoFront();
+  await enviar({
+    para: email,
+    assunto: 'Seu acesso ao Sistema do Ecossistema de Inovação',
+    texto: [
+      `Olá, ${nome}.`,
+      '',
+      `Foi criado um acesso para você no Sistema de Gestão do Ecossistema de Inovação, `
+        + `com o perfil "${perfil}"${instituicao ? ` da instituição ${instituicao}` : ''}.`,
+      '',
+      `Para escolher sua senha, abra este link (vale por ${DURACAO_CONVITE_HORAS} horas):`,
+      `${base}/redefinir-senha?token=${token}`,
+      '',
+      'Se você não esperava este e-mail, pode ignorá-lo.',
+    ].join('\n'),
+  });
+}
+
 /**
  * Grava a nova senha. O token só vale uma vez — quem gasta é a função do banco.
  *

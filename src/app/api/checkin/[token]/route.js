@@ -9,6 +9,7 @@ import { consultarReuniao } from '@/aplicacao/checkin/consultar-reuniao.js';
 import { registrarPresenca } from '@/aplicacao/checkin/registrar-presenca.js';
 import { ok, falha } from '@/infraestrutura/http/resposta.js';
 import { exigirDentroDoLimite, ipDaRequisicao } from '@/infraestrutura/http/limite.js';
+import { usuarioAtual } from '@/infraestrutura/seguranca/sessao.js';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +22,9 @@ export const dynamic = 'force-dynamic';
 export async function GET(req, { params }) {
   try {
     await exigirDentroDoLimite('consultar', ipDaRequisicao(req), params.token);
-    return ok(await consultarReuniao(params.token));
+    // Rota pública, mas quem já está logado recebe os próprios dados.
+    const usuario = await usuarioAtual().catch(() => null);
+    return ok(await consultarReuniao(params.token, usuario));
   } catch (e) {
     return falha(e);
   }
@@ -39,8 +42,10 @@ export async function POST(req, { params }) {
 // tentativa recusada também precisa contar.
     await exigirDentroDoLimite('registrar', ipDaRequisicao(req), params.token);
 
+    const ip = ipDaRequisicao(req);
     const corpo = await req.json().catch(() => null);
-    return ok(await registrarPresenca(params.token, corpo), 201);
+    const usuario = await usuarioAtual().catch(() => null);
+    return ok(await registrarPresenca(params.token, corpo, { usuario, ip }), 201);
   } catch (e) {
     return falha(e);
   }
