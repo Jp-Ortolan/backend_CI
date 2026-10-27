@@ -496,7 +496,8 @@ describe('domínios e indicadores', { skip: !rodar }, () => {
     assert.equal(typeof d.geral.instituicoesIntegrantes, 'number');
     assert.equal(d.minhaInstituicao.id, leitura.instituicaoId);
     assert.ok(Array.isArray(d.proximasReunioes));
-    assert.equal(d.cartoes, undefined, 'o painel da gestão não vai para o representante');
+    assert.equal(typeof d.cartoes.instituicoes.ativas, 'number', 'formato legado para a tela do dashboard');
+    assert.equal(d.participacaoPorInstituicao.length, 1, 'só a instituição dele no ranking');
   });
 
   test('perfil de consulta enxerga indicador mas não escreve', async () => {

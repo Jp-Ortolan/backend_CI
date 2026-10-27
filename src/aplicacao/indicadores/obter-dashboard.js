@@ -153,8 +153,29 @@ async function dashboardDoRepresentante(u) {
       [u.instituicaoId ?? null, PROXIMAS_REUNIOES],
     );
 
+    const pct = minha?.percentual_participacao;
+
     return {
       escopo: 'instituicao',
+      // O mesmo formato do dashboard da gestão, para a tela legada (que lê
+      // `cartoes`) funcionar sem mudança. Os números são os GERAIS do Fórum;
+      // o recorte da instituição vem em participacaoPorInstituicao.
+      cartoes: {
+        instituicoes: { ativas: Number(geral.instituicoesIntegrantes ?? 0), inativas: null, emProcesso: null },
+        representantesAtivos: Number(geral.representantesAtivos ?? 0),
+        reunioesRealizadas: Number(geral.reunioesRealizadas ?? 0),
+        reunioesAgendadas: proximas.length,
+        eventosRealizados: Number(geral.eventosRealizados ?? 0),
+        mediaPresenca: geral.percentualParticipacao ?? null,
+      },
+      evolucaoParticipacao: [],
+      participacaoPorInstituicao: minha ? [{
+        instituicaoId: minha.id,
+        instituicao: minha.nome,
+        percentual: pct === null || pct === undefined ? null : Number(pct),
+        reunioesEsperadas: Number(minha.reunioes_esperadas ?? 0),
+        reunioesComPresenca: Number(minha.reunioes_com_presenca ?? 0),
+      }] : [],
       geral,
       minhaInstituicao: minha
         ? {
