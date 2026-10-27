@@ -20,7 +20,7 @@
     "db:testar:bash": "./scripts/testar-banco.sh",
     "test": "npm run test:dominio && npm run test:integracao",
     "test:dominio": "node --import ./testes/registrar-alias.mjs --test \"testes/dominio/*.test.js\"",
-    "test:integracao": "node --import ./testes/registrar-alias.mjs --test \"testes/integracao/*.test.js\"",
+    "test:integracao": "node --import ./testes/registrar-alias.mjs --test --test-concurrency=1 \"testes/integracao/*.test.js\"",
     "db:migrar:bash": "./scripts/migrar.sh"
   },
   "dependencies": {
