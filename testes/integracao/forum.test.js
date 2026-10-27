@@ -193,9 +193,16 @@ describe('área da instituição', { skip: !rodar }, () => {
     assert.deepEqual(d.representantes, []);
   });
 
-  test('logo: representante envia e a imagem volta', async () => {
+  test('logo: representante envia, fica em análise, e só vale depois de aprovada', async () => {
     const r = await definirLogo(repr, instA, { nome: 'logo.png', mime: 'image/png', conteudo: PNG });
     assert.equal(r.versao, 1);
+    assert.equal(r.status, 'em_analise');
+    await assert.rejects(() => baixarLogo(reprOutra, instA), codigo('NAO_ENCONTRADO'));
+
+    const { rows } = await db.query(
+      `select id from solicitacao where tipo = 'aprovacao_documento' and documento_id = $1`, [r.documentoId]);
+    await decidirSolicitacao(diretoria, rows[0].id, { decisao: 'aprovar' });
+
     const l = await baixarLogo(reprOutra, instA); // outra instituição vê pela via pública (autorizada)
     assert.equal(l.mimeType, 'image/png');
     assert.ok(l.conteudo.equals(PNG));

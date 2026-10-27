@@ -15,6 +15,7 @@ import { ErroDeNegocio } from '@/dominio/erros.js';
 import { ROTULO_PAPEL } from '@/dominio/permissoes.js';
 import { exigir, validar } from '@/aplicacao/guarda.js';
 import { enviarConvite } from '@/aplicacao/autenticacao/recuperar-senha.js';
+import { log } from '@/infraestrutura/observabilidade/log.js';
 
 const PAPEIS = /** @type {const} */ (['admin', 'diretoria', 'representante']);
 
@@ -58,11 +59,12 @@ const formatar = (l) => ({
   senhaDefinida: l.senha_definida,
   ultimoLogin: l.ultimo_login,
   criadoEm: l.created_at,
+  versaoRegistro: Number(l.versao_registro),
 });
 
 const SELECAO = `
   select u.id, u.nome, u.email, u.papel, u.ativo, u.instituicao_id, u.pessoa_id,
-         u.ultimo_login, u.created_at, (u.senha_hash is not null) as senha_definida,
+         u.ultimo_login, u.created_at, u.versao_registro, (u.senha_hash is not null) as senha_definida,
          i.nome as instituicao_nome, p.nome as pessoa_nome
     from usuario u
     left join instituicao i on i.id = u.instituicao_id
@@ -118,21 +120,30 @@ export async function criarUsuario(usuario, entrada) {
     return formatar(await tx.consultaUm(`${SELECAO} where u.id = $1`, [linha.id]));
   });
 
-  // Depois do commit: o e-mail não deve sair se a conta não foi gravada.
-  await enviarConvite({
-    email: criado.email, nome: criado.nome, perfil: criado.rotuloPapel,
-    instituicao: criado.instituicao?.nome ?? null,
-  });
+  // Depois do commit: o e-mail não deve sair se a conta não foi gravada. Se o
+  // convite falhar, a conta continua criada e a resposta diz que o convite não
+  // saiu (o admin reenvia por POST /api/usuarios/:id/convite).
+  let conviteEnviado = true;
+  try {
+    await enviarConvite({
+      email: criado.email, nome: criado.nome, perfil: criado.rotuloPapel,
+      instituicao: criado.instituicao?.nome ?? null,
+    });
+  } catch (e) {
+    conviteEnviado = false;
+    log.erro('convite_nao_enviado', e);
+  }
 
-  return { ...criado, conviteEnviado: true };
+  return { ...criado, conviteEnviado };
 }
 
 /**
  * @param {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao|null} usuario
  * @param {string} id
  * @param {unknown} entrada
+ * @param {{ versaoRegistro?: number|null }} [opcoes]  controle de concorrência (contrato /api/governanca)
  */
-export async function editarUsuario(usuario, id, entrada) {
+export async function editarUsuario(usuario, id, entrada, opcoes = {}) {
   const u = exigir(usuario, 'usuario', 'editar');
   const d = validar(esquemaEditarUsuario, entrada ?? {});
 
@@ -153,8 +164,13 @@ export async function editarUsuario(usuario, id, entrada) {
   if (!Object.keys(c).length) throw new ErroDeNegocio('DADOS_INVALIDOS', 'Nenhum campo foi enviado para alteração.');
 
   return comUsuario(u.id, async (tx) => {
-    const atual = await tx.consultaUm('select id, papel, instituicao_id from usuario where id = $1', [id]);
+    const atual = await tx.consultaUm('select id, papel, instituicao_id, versao_registro from usuario where id = $1', [id]);
     if (!atual) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Usuário não encontrado.');
+    if (opcoes.versaoRegistro && Number(opcoes.versaoRegistro) !== Number(atual.versao_registro)) {
+      throw new ErroDeNegocio('VERSAO_DESATUALIZADA',
+        'Esta conta foi alterada por outra pessoa depois que você abriu a tela. Atualize e refaça.',
+        { versaoAtual: Number(atual.versao_registro) });
+    }
 
     const papelFinal = /** @type {string} */ (c.papel ?? atual.papel);
     const instFinal = 'instituicao_id' in c ? c.instituicao_id : atual.instituicao_id;
@@ -165,6 +181,16 @@ export async function editarUsuario(usuario, id, entrada) {
     }
     // Gestão não é "de uma instituição": a ligação sairia do lugar errado.
     if (papelFinal !== 'representante') c.instituicao_id = null;
+
+    // Nunca deixar o sistema sem administrador ativo.
+    if (atual.papel === 'admin' && (papelFinal !== 'admin' || c.ativo === false)) {
+      const outros = await tx.consultaUm(
+        `select count(*)::int as n from usuario where papel = 'admin' and ativo and id <> $1`, [id]);
+      if (!outros?.n) {
+        throw new ErroDeNegocio('DADOS_INVALIDOS',
+          'Esta é a única conta de administrador ativa. Crie ou ative outro administrador antes.');
+      }
+    }
 
     await conferirLigacoes(tx, { instituicaoId: c.instituicao_id, pessoaId: c.pessoa_id });
 

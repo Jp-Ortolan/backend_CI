@@ -164,10 +164,20 @@ begin
     set local role app_web;
     perform set_config('app.usuario_id', '11111111-1111-1111-1111-111111111112', true);
 
-    insert into documento (nome, tipo, url_externa, instituicao_id, visibilidade)
+    insert into documento (nome, tipo, url_externa, instituicao_id, visibilidade, status_analise)
     values ('Ofício', 'oficio', 'https://exemplo.br/oficio.pdf',
-            'aaaaaaaa-0000-0000-0000-000000000001', 'interno');
-    raise notice 'OK   documento — representante anexa à própria instituição';
+            'aaaaaaaa-0000-0000-0000-000000000001', 'interno', 'em_analise');
+    raise notice 'OK   documento — representante anexa à própria instituição (em análise)';
+
+    -- Desde a 014: o que a instituição envia nasce em análise, nunca aprovado.
+    begin
+      insert into documento (nome, tipo, url_externa, instituicao_id, visibilidade)
+      values ('Aprovado por conta própria', 'oficio', 'https://exemplo.br/x.pdf',
+              'aaaaaaaa-0000-0000-0000-000000000001', 'interno');
+      raise exception 'FALHOU: representante anexou documento já aprovado';
+    exception when insufficient_privilege then null;
+    end;
+    raise notice 'OK   documento — representante não anexa documento já aprovado';
 
     begin
       insert into documento (nome, url_externa, instituicao_id)

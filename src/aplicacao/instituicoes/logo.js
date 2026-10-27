@@ -15,6 +15,8 @@ import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';
 import { salvar, ler } from '@/infraestrutura/armazenamento/index.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir, exigirInstituicaoPropria } from '@/aplicacao/guarda.js';
+import { ehGestao } from '@/dominio/permissoes.js';
+import { pedirAnalise } from '@/aplicacao/documentos/enviar-documento.js';
 import {
   conteudoBateComTipo, montarCaminho, tamanhoLegivel,
 } from '@/dominio/arquivos.js';
@@ -51,6 +53,8 @@ export async function definirLogo(usuario, instituicaoId, arquivo) {
       'O conteúdo do arquivo não é a imagem que a extensão diz. Confira o arquivo.');
   }
 
+  const emAnalise = !ehGestao(u.papel);
+
   return comUsuario(u.id, async (tx) => {
     const inst = await tx.consultaUm(
       'select id, logo_documento_id from instituicao where id = $1', [instituicaoId]);
@@ -69,16 +73,27 @@ export async function definirLogo(usuario, instituicaoId, arquivo) {
       linha = await tx.consultaUm(
         `insert into documento
            (id, nome, tipo, storage_path, mime_type, tamanho_bytes, checksum_sha256,
-            instituicao_id, enviado_por, visibilidade, versao, substitui_id)
-         values ($1, 'Logo', 'logo', $2, $3, $4, $5, $6, $7, 'interno', $8, $9)
+            instituicao_id, enviado_por, visibilidade, versao, substitui_id, status_analise)
+         values ($1, 'Logo', 'logo', $2, $3, $4, $5, $6, $7, 'interno', $8, $9, $10)
          returning id`,
         [documentoId, caminho, arquivo.mime, arquivo.conteudo.length, checksum,
           instituicaoId, u.id, anterior ? Number(anterior.versao) + 1 : 1,
-          anterior?.id ?? null],
+          anterior?.id ?? null, emAnalise ? 'em_analise' : 'aprovado'],
       );
       if (!linha) throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite enviar a logo.');
 
       await salvar(tx, { documentoId, caminho, conteudo: arquivo.conteudo });
+
+      // Representante: a logo nova fica em análise e a atual continua valendo
+      // até a Diretoria aprovar (revisão do contrato do front, 26/10).
+      if (emAnalise) {
+        await pedirAnalise(tx, u, instituicaoId, documentoId, 'logo');
+        return {
+          instituicaoId, documentoId, status: 'em_analise',
+          url: `/api/instituicoes/${instituicaoId}/logo`,
+          versao: anterior ? Number(anterior.versao) + 1 : 1,
+        };
+      }
 
       const atualizada = await tx.consultaUm(
         `update instituicao set logo_documento_id = $2, updated_by = $3
@@ -96,6 +111,7 @@ export async function definirLogo(usuario, instituicaoId, arquivo) {
     return {
       instituicaoId,
       documentoId,
+      status: 'aprovado',
       url: `/api/instituicoes/${instituicaoId}/logo`,
       versao: anterior ? Number(anterior.versao) + 1 : 1,
     };

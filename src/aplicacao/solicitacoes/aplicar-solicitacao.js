@@ -9,6 +9,10 @@ import { ErroDeNegocio } from '@/dominio/erros.js';
 import { paraColunas, gravarGruposDaInstituicao } from '@/aplicacao/instituicoes/esquemas.js';
 import { TRANSICOES_INSTITUICAO } from '@/aplicacao/instituicoes/alterar-status-instituicao.js';
 import { aplicarMarcacao } from '@/aplicacao/presencas/marcar-presenca.js';
+import {
+  designarRepresentacao, encerrarVinculoDaInstituicao, resolverPessoa,
+} from '@/aplicacao/vinculos/representacao.js';
+import { aplicarRegistroInstituicao } from '@/aplicacao/governanca/instituicao-registro.js';
 
 /** @typedef {import('@/infraestrutura/banco/consulta.js').Transacao} Transacao */
 
@@ -18,10 +22,11 @@ const hoje = () => new Date().toISOString().slice(0, 10);
  * @param {Transacao} tx
  * @param {{ id: string, instituicao_id: string, tipo: string, dados: any,
  *           documento_id: string|null }} s
- * @param {string} usuarioId  quem aprovou
+ * @param {{ id: string, papel: string }} quem  quem aprovou
  * @returns {Promise<Record<string, unknown>>}  o que mudou, para a resposta
  */
-export async function aplicarSolicitacao(tx, s, usuarioId) {
+export async function aplicarSolicitacao(tx, s, quem) {
+  const usuarioId = quem.id;
   const d = s.dados ?? {};
 
   switch (s.tipo) {
@@ -51,95 +56,61 @@ export async function aplicarSolicitacao(tx, s, usuarioId) {
       const alvo = s.tipo === 'troca_titular' ? 'titular'
         : s.tipo === 'troca_suplente' ? 'suplente'
           : (d.tipoRepresentacao ?? 'integrante');
-      const inicio = d.dataInicio ?? hoje();
-
-      const pessoaId = await resolverPessoa(tx, d);
-
-      // Quem ocupa hoje a função sai dela ANTES de o novo entrar: o índice
-      // vinculo_titular_unico não admite dois titulares vigentes nem por um
-      // instante dentro da transação.
-      /** @type {string|null} */
-      let anteriorId = null;
-      if (alvo === 'titular' || alvo === 'suplente') {
-        const anterior = await tx.consultaUm(
-          `select id, pessoa_id, data_inicio from vinculo
-            where instituicao_id = $1 and status = 'ativo' and tipo_representacao = $2::tipo_representacao`,
-          [s.instituicao_id, alvo],
-        );
-        if (anterior && anterior.pessoa_id !== pessoaId) {
-          anteriorId = anterior.id;
-          if (d.anterior === 'manter_como_integrante') {
-            await tx.consulta(
-              `update vinculo set tipo_representacao = 'integrante',
-                      motivo_encerramento = null
-                where id = $1`, [anterior.id]);
-          } else {
-            // A data de fim não pode ser anterior ao início do próprio vínculo.
-            const fim = inicio < anterior.data_inicio ? anterior.data_inicio : inicio;
-            await tx.consulta(
-              `update vinculo set status = 'encerrado', data_fim = $2,
-                      motivo_encerramento = $3
-                where id = $1`,
-              [anterior.id, fim, d.motivo ?? `Substituído (${s.tipo.replace('_', ' de ')})`],
-            );
-          }
-        }
-      }
-
-      // A pessoa já representa a instituição (era suplente e vira titular,
-      // por exemplo): muda o tipo do vínculo que existe, sem abrir outro.
-      const existente = await tx.consultaUm(
-        `select id from vinculo
-          where pessoa_id = $1 and instituicao_id = $2 and status = 'ativo'`,
-        [pessoaId, s.instituicao_id],
-      );
-
-      let vinculoId;
-      if (existente) {
-        await tx.consulta(
-          `update vinculo set tipo_representacao = $2::tipo_representacao,
-                  cargo = coalesce($3, cargo),
-                  oficio_documento_id = coalesce($4, oficio_documento_id)
-            where id = $1`,
-          [existente.id, alvo, d.cargo ?? null, s.documento_id],
-        );
-        vinculoId = existente.id;
-      } else {
-        const novo = await tx.consultaUm(
-          `insert into vinculo (pessoa_id, instituicao_id, cargo, data_inicio,
-                                tipo_representacao, oficio_documento_id)
-           values ($1, $2, $3, $4, $5::tipo_representacao, $6)
-           returning id`,
-          [pessoaId, s.instituicao_id, d.cargo ?? null, inicio, alvo, s.documento_id],
-        );
-        vinculoId = novo.id;
-      }
-
-      return { pessoaId, vinculoId, tipoRepresentacao: alvo, vinculoAnteriorId: anteriorId };
+      const pessoaId = await resolverPessoa(tx, s.instituicao_id, d);
+      return designarRepresentacao(tx, s.instituicao_id, {
+        alvo, pessoaId, inicio: d.dataInicio, cargo: d.cargo, documentoId: s.documento_id,
+        anterior: d.anterior, motivo: d.motivo ?? `Substituído (${s.tipo.replace('_', ' de ')})`,
+      });
     }
 
     // ------------------------------------------------------------------------
-    case 'remover_representante': {
-      const v = await tx.consultaUm(
-        `select id, data_inicio, status from vinculo
-          where id = $1 and instituicao_id = $2`,
-        [d.vinculoId, s.instituicao_id],
-      );
-      if (!v) throw new ErroDeNegocio('VINCULO_INVALIDO', 'O vínculo indicado não é desta instituição.');
-      if (v.status === 'encerrado') {
-        throw new ErroDeNegocio('VINCULO_JA_ENCERRADO', 'Este vínculo já estava encerrado.');
+    // Contrato do front: substituir um vínculo específico por outra pessoa.
+    case 'substituicao_representante': {
+      const novo = d.novoRepresentante ?? {};
+      const pessoaId = await resolverPessoa(tx, s.instituicao_id, {
+        pessoa: { nome: novo.nome, email: novo.email || null, telefone: novo.telefone || null },
+      });
+      return designarRepresentacao(tx, s.instituicao_id, {
+        alvo: novo.tipo === 'adicional' || !novo.tipo ? 'integrante' : novo.tipo,
+        pessoaId, cargo: novo.cargo ?? null, documentoId: s.documento_id,
+        vinculoAnteriorId: d.representanteAnteriorId,
+        motivo: s.justificativa ?? 'Substituição aprovada pela Diretoria',
+      });
+    }
+
+    case 'encerramento_representante':
+      return encerrarVinculoDaInstituicao(tx, s.instituicao_id, d.representanteAnteriorId, {
+        motivo: s.justificativa ?? 'Encerramento aprovado pela Diretoria',
+      });
+
+    // ------------------------------------------------------------------------
+    case 'remover_representante':
+      return encerrarVinculoDaInstituicao(tx, s.instituicao_id, d.vinculoId, {
+        dataFim: d.dataFim, motivo: d.motivo,
+      });
+
+    // ------------------------------------------------------------------------
+    // Contrato do front: a ficha inteira, com os nomes de campo da tela.
+    case 'alteracao_cadastral': {
+      const aplicados = await aplicarRegistroInstituicao(tx, s.instituicao_id, d.alteracoes ?? {}, quem);
+      return { camposAlterados: aplicados };
+    }
+
+    // ------------------------------------------------------------------------
+    // Logo, ofício ou termo enviado pela instituição: passa a valer. A logo
+    // vira a logo da instituição (e só agora pode ir para o painel público).
+    case 'aprovacao_documento': {
+      const doc = await tx.consultaUm(
+        `update documento set status_analise = 'aprovado'
+          where id = $1 and instituicao_id = $2 returning id, tipo`,
+        [d.documentoId ?? s.documento_id, s.instituicao_id]);
+      if (!doc) throw new ErroDeNegocio('NAO_ENCONTRADO', 'O documento desta solicitação não existe mais.');
+      if (doc.tipo === 'logo') {
+        await tx.consulta(
+          'update instituicao set logo_documento_id = $2, updated_by = $3 where id = $1',
+          [s.instituicao_id, doc.id, quem.id]);
       }
-      const fim = d.dataFim ?? hoje();
-      if (fim < v.data_inicio) {
-        throw new ErroDeNegocio('DATA_FIM_ANTERIOR_AO_INICIO',
-          `A data de encerramento não pode ser anterior a ${v.data_inicio}.`);
-      }
-      await tx.consulta(
-        `update vinculo set status = 'encerrado', data_fim = $2, motivo_encerramento = $3
-          where id = $1`,
-        [v.id, fim, d.motivo],
-      );
-      return { vinculoId: v.id, dataFim: fim };
+      return { documentoId: doc.id, tipo: doc.tipo, status: 'aprovado' };
     }
 
     // ------------------------------------------------------------------------
@@ -207,6 +178,7 @@ export async function aplicarSolicitacao(tx, s, usuarioId) {
     case 'correcao_presenca': {
       const r = await aplicarMarcacao(tx, usuarioId, d.reuniaoId, {
         pessoaId: d.pessoaId, status: d.status, observacoes: d.observacoes ?? null,
+        modo: d.modo ?? null,
       });
       return { presencaId: r.id, status: r.status };
     }
@@ -214,38 +186,4 @@ export async function aplicarSolicitacao(tx, s, usuarioId) {
     default:
       throw new ErroDeNegocio('DADOS_INVALIDOS', `Tipo de solicitação desconhecido: ${s.tipo}.`);
   }
-}
-
-/**
- * A pessoa que assume a representação: a indicada por id, ou uma nova criada
- * com os dados do pedido (reaproveitando quem já tiver o mesmo CPF ou e-mail —
- * decisão de modelagem 1: a pessoa é uma só, os vínculos é que mudam).
- *
- * @param {Transacao} tx
- * @param {any} d
- * @returns {Promise<string>}
- */
-async function resolverPessoa(tx, d) {
-  if (d.pessoaId) {
-    const p = await tx.consultaUm('select id from pessoa where id = $1', [d.pessoaId]);
-    if (!p) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Pessoa indicada não encontrada.');
-    return p.id;
-  }
-
-  const n = d.pessoa;
-  const existente = await tx.consultaUm(
-    `select id from pessoa
-      where ($1::text is not null and cpf = $1)
-         or ($2::text is not null and email = $2)
-      order by (cpf = $1) desc nulls last
-      limit 1`,
-    [n.cpf ?? null, n.email ?? null],
-  );
-  if (existente) return existente.id;
-
-  const nova = await tx.consultaUm(
-    `insert into pessoa (nome, cpf, email, telefone) values ($1, $2, $3, $4) returning id`,
-    [n.nome, n.cpf ?? null, n.email ?? null, n.telefone ?? null],
-  );
-  return nova.id;
 }
