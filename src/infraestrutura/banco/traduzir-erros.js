@@ -57,6 +57,14 @@ const MAPA = {
     'Esta pessoa tem uma conta de acesso. Desative a conta antes de excluir.'],
   MODO_INVALIDO: ['DADOS_INVALIDOS',
     'Modo de participação inválido para esta atividade.'],
+
+  // ------------------------------------------------ migration 015 (atividades)
+  ASSINATURA_OBRIGATORIA: ['DADOS_INVALIDOS',
+    'Digite seu nome completo como assinatura para confirmar a presença.'],
+  PRESENCA_JA_REGISTRADA: ['PRESENCA_JA_REGISTRADA',
+    'Esta presença já estava registrada nesta atividade.'],
+  SEM_PERMISSAO_CONVOCACAO: ['SEM_PERMISSAO',
+    'A instituição só responde à convocação; o conteúdo é definido pela Diretoria.'],
 };
 
 /**

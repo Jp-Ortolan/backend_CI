@@ -65,3 +65,26 @@ export async function enviar(m) {
     console.error('[email] falha ao enviar', e);
   }
 }
+
+/**
+ * Igual a enviar(), mas diz o que aconteceu — para quem precisa registrar a
+ * entrega (convocações). Sem provedor configurado nada sai de verdade, e isso
+ * é informado como falha: e-mail impresso no terminal não é e-mail enviado.
+ *
+ * @param {Mensagem} m
+ * @returns {Promise<{ status: 'enviada'|'falhou', detalhe: string|null }>}
+ */
+export async function entregar(m) {
+  if (process.env.EMAIL_PROVEDOR !== 'resend') {
+    await porTerminal(m);
+    return { status: 'falhou', detalhe: 'Nenhum provedor de e-mail configurado (EMAIL_PROVEDOR).' };
+  }
+  try {
+    await porResend(m);
+    // O provedor aceitou; "entregue" só com confirmação do provedor (webhook).
+    return { status: 'enviada', detalhe: null };
+  } catch (e) {
+    console.error('[email] falha ao enviar', e);
+    return { status: 'falhou', detalhe: String(/** @type {any} */ (e)?.message ?? e).slice(0, 300) };
+  }
+}
