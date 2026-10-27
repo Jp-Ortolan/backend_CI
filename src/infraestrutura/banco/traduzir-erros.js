@@ -51,6 +51,10 @@ const MAPA = {
     'Esta atividade não aceita registro de convidados. Procure a organização.'],
   LIMITE_ATINGIDO: ['LIMITE_ATINGIDO',
     'O limite de participantes desta atividade já foi atingido.'],
+  PESSOA_COM_HISTORICO: ['PESSOA_COM_HISTORICO',
+    'Esta pessoa já participou de reuniões e não pode ser excluída. Encerre o vínculo.'],
+  PESSOA_COM_CONTA: ['PESSOA_COM_HISTORICO',
+    'Esta pessoa tem uma conta de acesso. Desative a conta antes de excluir.'],
   MODO_INVALIDO: ['DADOS_INVALIDOS',
     'Modo de participação inválido para esta atividade.'],
 };

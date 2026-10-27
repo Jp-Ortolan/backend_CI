@@ -103,6 +103,10 @@ export async function listarInstituicoes(usuario, filtros) {
               t.nome as tipo,
               a.nome as area,
               ve.nome as vertente,
+              coalesce((select array_agg(g.nome order by g.nome)
+                          from instituicao_grupo_trabalho ig
+                          join grupo_trabalho g on g.id = ig.grupo_trabalho_id
+                         where ig.instituicao_id = i.id), '{}') as gts,
               (i.logo_documento_id is not null) as tem_logo,
               (select p.nome from vinculo v join pessoa p on p.id = v.pessoa_id
                 where v.instituicao_id = i.id and v.status = 'ativo'
@@ -135,6 +139,10 @@ export async function listarInstituicoes(usuario, filtros) {
         tipo: l.tipo,
         area: l.area,
         vertente: l.vertente,
+        gts: l.gts ?? [],
+        // O front distingue "situação da adesão" do status legado; aqui os dois
+        // vêm da mesma coluna, com o nome que o contrato do front usa.
+        situacaoAdesao: l.status === 'ativa' ? 'aprovada' : l.status,
         titular: l.titular,
         logoUrl: l.tem_logo ? `/api/instituicoes/${l.id}/logo` : null,
         cidade: l.cidade,

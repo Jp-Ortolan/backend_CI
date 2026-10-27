@@ -10,7 +10,10 @@ import { pode } from '@/dominio/permissoes.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 
 export const esquemaEncerramento = z.object({
-  dataFim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data no formato AAAA-MM-DD.'),
+  // Sem data, encerra hoje: é o que a tela faz ao clicar em "Encerrar vínculo"
+  // (ela manda o corpo vazio). Uma data passada continua aceita.
+  dataFim: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Informe a data no formato AAAA-MM-DD.')
+    .optional().default(() => new Date().toISOString().slice(0, 10)),
   observacoes: z.string().trim().optional(),
   // "Motivo da substituição": fim de mandato, troca de titular, saiu da instituição...
   motivo: z.string().trim().max(500).optional(),
@@ -28,7 +31,7 @@ export async function encerrarVinculo(usuario, vinculoId, entrada) {
     throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite encerrar vínculos.');
   }
 
-  const analise = esquemaEncerramento.safeParse(entrada);
+  const analise = esquemaEncerramento.safeParse(entrada ?? {});
   if (!analise.success) {
     throw new ErroDeNegocio('DADOS_INVALIDOS',
       analise.error.issues[0]?.message ?? 'Dados inválidos.');
