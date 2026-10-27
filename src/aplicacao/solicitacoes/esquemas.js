@@ -15,6 +15,9 @@ export const TIPOS_SOLICITACAO = /** @type {const} */ ([
   'alterar_dados', 'troca_titular', 'troca_suplente', 'incluir_representante',
   'remover_representante', 'novo_oficio', 'entrada_forum', 'saida_forum',
   'correcao_presenca',
+  // Contrato /api/governanca (front):
+  'alteracao_cadastral', 'substituicao_representante', 'encerramento_representante',
+  'aprovacao_documento',
 ]);
 
 export const ROTULO_SOLICITACAO = {
@@ -27,6 +30,10 @@ export const ROTULO_SOLICITACAO = {
   entrada_forum: 'Entrada no Fórum',
   saida_forum: 'Saída do Fórum',
   correcao_presenca: 'Correção de presença',
+  alteracao_cadastral: 'Alteração cadastral',
+  substituicao_representante: 'Substituição de representante',
+  encerramento_representante: 'Encerramento de representante',
+  aprovacao_documento: 'Análise de documento',
 };
 
 /** Os campos sensíveis da instituição que mudam por solicitação. */
@@ -114,6 +121,8 @@ export const esquemaDecisao = z.object({
     errorMap: () => ({ message: 'Decida "aprovar" ou "recusar".' }),
   }),
   resposta: z.string().trim().max(2000).optional().transform((v) => v || null),
+  // Controle de concorrência: a versão da solicitação que a pessoa leu.
+  versaoRegistro: z.coerce.number().int().positive().optional(),
 });
 
 export const esquemaFiltroSolicitacao = z.object({

@@ -24,6 +24,13 @@ const ROTAS_PUBLICAS = [
   // Painel público (revisão de outubro): sem login, só dado agregado ou
   // autorizado. Quem recorta são as funções publico_* do banco (migration 011).
   '/api/publico',
+  // Contrato /api/governanca do front: só estas quatro são sem login. O resto
+  // de /api/governanca exige sessão como qualquer rota.
+  '/api/governanca/publico',
+  '/api/governanca/checkin',
+  // QR (o token é o próprio conteúdo do QR) e arquivo por link assinado.
+  '/api/governanca/qr',
+  '/api/governanca/arquivos',
 ];
 
 /**
@@ -48,7 +55,7 @@ export function middleware(req) {
   // Preflight: o navegador pergunta antes de mandar POST/PATCH/DELETE com cookie.
   if (req.method === 'OPTIONS') {
     const r = new NextResponse(null, { status: 204 });
-    r.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS');
+    r.headers.set('Access-Control-Allow-Methods', 'GET, POST, PATCH, PUT, DELETE, OPTIONS');
     r.headers.set('Access-Control-Allow-Headers', 'Content-Type');
     r.headers.set('Access-Control-Max-Age', '86400');
     return comCors(r, origem);

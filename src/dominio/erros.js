@@ -20,7 +20,8 @@
  *   |'DATA_SAIDA_OBRIGATORIA'
  *   |'ALTERACAO_EXIGE_APROVACAO'|'TRANSICAO_INVALIDA'|'SOLICITACAO_JA_DECIDIDA'
  *   |'REPRESENTACAO_DUPLICADA'|'CONTA_SEM_INSTITUICAO'|'CONVIDADO_NAO_PERMITIDO'
- *   |'LIMITE_ATINGIDO'|'NUMERO_DUPLICADO'|'PESSOA_COM_HISTORICO'} CodigoErro
+ *   |'LIMITE_ATINGIDO'|'NUMERO_DUPLICADO'|'PESSOA_COM_HISTORICO'
+ *   |'VERSAO_DESATUALIZADA'|'OPERACAO_REPETIDA_DIFERENTE'} CodigoErro
  */
 
 /** @type {Record<CodigoErro, number>} */
@@ -81,6 +82,10 @@ const HTTP = {
   LIMITE_ATINGIDO:             409,
   NUMERO_DUPLICADO:            409,
   PESSOA_COM_HISTORICO:        409,
+// Outra pessoa salvou o registro depois que esta abriu a tela (versaoRegistro).
+  VERSAO_DESATUALIZADA:        409,
+// A mesma chaveOperacao veio de novo com outro conteúdo.
+  OPERACAO_REPETIDA_DIFERENTE: 409,
 };
 
 export class ErroDeNegocio extends Error {

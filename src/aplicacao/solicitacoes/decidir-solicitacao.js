@@ -21,7 +21,7 @@ import { aplicarSolicitacao } from './aplicar-solicitacao.js';
  */
 export async function decidirSolicitacao(usuario, id, entrada) {
   const u = exigir(usuario, 'solicitacao', 'aprovar');
-  const { decisao, resposta } = validar(esquemaDecisao, entrada ?? {});
+  const { decisao, resposta, versaoRegistro } = validar(esquemaDecisao, entrada ?? {});
 
   if (decisao === 'recusar' && !resposta) {
     throw new ErroDeNegocio('DADOS_INVALIDOS',
@@ -39,11 +39,22 @@ export async function decidirSolicitacao(usuario, id, entrada) {
       throw new ErroDeNegocio('SOLICITACAO_JA_DECIDIDA',
         `Esta solicitação já está "${s.status}".`, { status: s.status });
     }
+    if (versaoRegistro && Number(s.versao_registro) !== versaoRegistro) {
+      throw new ErroDeNegocio('VERSAO_DESATUALIZADA',
+        'Esta solicitação mudou desde que você abriu a tela. Atualize antes de decidir.',
+        { versaoAtual: Number(s.versao_registro) });
+    }
 
     /** @type {Record<string, unknown>|null} */
     let efeito = null;
     try {
-      if (decisao === 'aprovar') efeito = await aplicarSolicitacao(tx, s, u.id);
+      if (decisao === 'aprovar') efeito = await aplicarSolicitacao(tx, s, u);
+      // Documento recusado não fica "em análise" para sempre: é marcado
+      // recusado, e a instituição vê isso na lista dela.
+      if (decisao === 'recusar' && s.tipo === 'aprovacao_documento') {
+        await tx.consulta(`update documento set status_analise = 'recusado' where id = $1`,
+          [s.dados?.documentoId ?? s.documento_id]);
+      }
 
       await tx.consulta(
         `update solicitacao
@@ -64,7 +75,7 @@ export async function decidirSolicitacao(usuario, id, entrada) {
          values ($1, $2, $3, $4)`,
         [s.solicitado_por,
           `${ROTULO_SOLICITACAO[s.tipo]}: ${decisao === 'aprovar' ? 'aprovada' : 'recusada'}`,
-          resposta, `/solicitacoes/${s.id}`],
+          resposta, '/minha-instituicao'],
       );
     }
 

@@ -25,5 +25,9 @@ export function resolve(especificador, contexto, proximo) {
   if (especificador.startsWith('@/')) {
     return proximo(RAIZ_SRC + especificador.slice(2), contexto);
   }
+  // O Next resolve "next/server" no bundle; o Node puro precisa da extensão.
+  if (especificador === 'next/server' || especificador === 'next/headers') {
+    return proximo(`${especificador}.js`, contexto);
+  }
   return proximo(especificador, contexto);
 }

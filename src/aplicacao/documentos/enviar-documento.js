@@ -16,6 +16,7 @@ import { salvar } from '@/infraestrutura/armazenamento/index.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir, exigirInstituicaoPropria, validar } from '@/aplicacao/guarda.js';
 import { ehGestao } from '@/dominio/permissoes.js';
+import { registrarSolicitacao } from '@/aplicacao/solicitacoes/criar-solicitacao.js';
 import {
   LIMITE_BYTES, TIPOS_PERMITIDOS, conteudoBateComTipo,
   montarCaminho, sanitizarNome, tamanhoLegivel,
@@ -78,6 +79,8 @@ export async function enviarDocumento(usuario, { campos, arquivo = null }) {
 
   // Padrão: material de reunião é para os membros; da instituição, interno.
   const visibilidade = d.visibilidade ?? (d.reuniaoId ? 'membros' : 'interno');
+  // O que a instituição envia só vale depois que a Diretoria aprova (014).
+  const statusAnalise = ehGestao(u.papel) ? 'aprovado' : 'em_analise';
 
   if (!arquivo && !d.urlExterna) {
     throw new ErroDeNegocio('DADOS_INVALIDOS',
@@ -159,12 +162,12 @@ export async function enviarDocumento(usuario, { campos, arquivo = null }) {
         linha = await tx.consultaUm(
           `insert into documento
              (nome, descricao, tipo, url_externa, instituicao_id, reuniao_id, enviado_por,
-              visibilidade, versao, substitui_id)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+              visibilidade, versao, substitui_id, status_analise)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
            returning id, nome, created_at`,
           [nomeVisivel, d.descricao, d.tipo, d.urlExterna,
             d.instituicaoId ?? null, d.reuniaoId ?? null, u.id,
-            visibilidade, versao, d.substituiId ?? null],
+            visibilidade, versao, d.substituiId ?? null, statusAnalise],
         );
       } catch (e) {
         traduzirErroDoBanco(e);
@@ -172,10 +175,11 @@ export async function enviarDocumento(usuario, { campos, arquivo = null }) {
       if (!linha) {
         throw new ErroDeNegocio('SEM_PERMISSAO', 'Seu perfil não permite anexar documentos.');
       }
+      if (statusAnalise === 'em_analise') await pedirAnalise(tx, u, d.instituicaoId, linha.id, d.tipo);
       return {
         id: linha.id, nome: linha.nome, origem: 'link',
         urlExterna: d.urlExterna, enviadoEm: linha.created_at,
-        visibilidade, versao,
+        visibilidade, versao, statusAnalise,
       };
     }
 
@@ -208,13 +212,13 @@ export async function enviarDocumento(usuario, { campos, arquivo = null }) {
         `insert into documento
            (id, nome, descricao, tipo, storage_path, mime_type, tamanho_bytes,
             checksum_sha256, instituicao_id, reuniao_id, enviado_por,
-            visibilidade, versao, substitui_id)
-         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+            visibilidade, versao, substitui_id, status_analise)
+         values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
          returning id, nome, created_at`,
         [documentoId, nomeVisivel, d.descricao, d.tipo, caminho, arquivo.mime,
           arquivo.conteudo.length, checksum,
           d.instituicaoId ?? null, d.reuniaoId ?? null, u.id,
-          visibilidade, versao, d.substituiId ?? null],
+          visibilidade, versao, d.substituiId ?? null, statusAnalise],
       );
     } catch (e) {
       traduzirErroDoBanco(e);
@@ -226,6 +230,7 @@ export async function enviarDocumento(usuario, { campos, arquivo = null }) {
     // Mesma transação do metadado: ou as duas gravações passam, ou nenhuma.
     // Metadado sem conteúdo seria um botão "Baixar" que dá erro.
     await salvar(tx, { documentoId, caminho, conteudo: arquivo.conteudo });
+    if (statusAnalise === 'em_analise') await pedirAnalise(tx, u, d.instituicaoId, documentoId, d.tipo);
 
     return {
       id: linha.id,
@@ -236,8 +241,28 @@ export async function enviarDocumento(usuario, { campos, arquivo = null }) {
       checksum,
       visibilidade,
       versao,
+      statusAnalise,
       enviadoEm: linha.created_at,
       jaExistia: false,
     };
+  });
+}
+
+/**
+ * Documento enviado pela instituição vira um pedido de análise para a
+ * Diretoria (solicitação aprovacao_documento). Aprovado, passa a valer.
+ *
+ * @param {import('@/infraestrutura/banco/consulta.js').Transacao} tx
+ * @param {{ id: string }} u
+ * @param {string} instituicaoId
+ * @param {string} documentoId
+ * @param {string|null} tipo
+ */
+export async function pedirAnalise(tx, u, instituicaoId, documentoId, tipo) {
+  await registrarSolicitacao(tx, u, {
+    instituicaoId, tipo: 'aprovacao_documento',
+    dados: { documentoId, tipoDocumento: tipo ?? 'outro' },
+    justificativa: `Documento enviado pela instituição: ${tipo ?? 'outro'}`,
+    documentoId,
   });
 }
