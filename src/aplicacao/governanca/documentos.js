@@ -13,7 +13,7 @@ import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { ehGestao, pode } from '@/dominio/permissoes.js';
 import { conteudoBateComTipo, tamanhoLegivel } from '@/dominio/arquivos.js';
-import { exigir, exigirInstituicaoPropria } from '@/aplicacao/guarda.js';
+import { exigir } from '@/aplicacao/guarda.js';
 import { enviarDocumento } from '@/aplicacao/documentos/enviar-documento.js';
 import { definirLogo } from '@/aplicacao/instituicoes/logo.js';
 import { instituicaoDaSessao } from './minha-instituicao.js';
@@ -85,7 +85,9 @@ function podeEnviar(u, e) {
 export async function listarDocumentosDoEscopo(usuario, escopo, base) {
   const u = exigir(usuario, 'documento', 'ver');
   const e = typeof escopo === 'function' ? escopo(u) : escopo;
-  if (e.dono === 'instituicao') exigirInstituicaoPropria(u, e.id);
+  // Sem trava por instituição aqui: o RLS já entrega ao representante só os
+  // documentos da instituição dele e os de visibilidade "membros"/"publico".
+  // Os internos de outra instituição simplesmente não aparecem.
 
   return comUsuario(u.id, async (tx) => {
     await conferirEscopo(tx, e);
