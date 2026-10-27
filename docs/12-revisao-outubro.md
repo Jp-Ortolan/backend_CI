@@ -163,3 +163,13 @@ com um rewrite no `vercel.json` do front:
    (`conta_participacao = true`). Revisar as que eram reunião de GT ou de diretoria.
 6. Publicar no front os valores novos de `papel` e de `status` (tabela no fim do
    contrato de API).
+
+---
+
+## Atualização de 26/10 — contrato `/api/governanca`
+
+O front passou a consumir um contrato próprio (`/api/governanca`, versão 1).
+Tudo o que ele pede foi implementado nas branches
+`feature/governanca-cadastros`, `feature/governanca-atividades` e
+`feature/relatorios-e-importacao` (migrations 013 a 016). Rotas, regras e
+roteiro de homologação: [13-contrato-governanca.md](13-contrato-governanca.md).
