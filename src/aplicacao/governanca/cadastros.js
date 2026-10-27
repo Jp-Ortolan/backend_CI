@@ -11,7 +11,7 @@ import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { traduzirErroDoBanco } from '@/infraestrutura/banco/traduzir-erros.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { ehGestao } from '@/dominio/permissoes.js';
-import { exigir, exigirInstituicaoPropria } from '@/aplicacao/guarda.js';
+import { exigir } from '@/aplicacao/guarda.js';
 import {
   lerRegistroInstituicao, aplicarRegistroInstituicao, compararInstituicao,
 } from './instituicao-registro.js';
@@ -36,8 +36,18 @@ function conferirVersao(enviada, atual) {
  */
 export async function obterGovernancaInstituicao(usuario, id) {
   const u = exigir(usuario, 'instituicao', 'ver');
-  exigirInstituicaoPropria(u, id);
-  return comUsuario(u.id, (tx) => lerRegistroInstituicao(tx, id));
+  const registro = await comUsuario(u.id, (tx) => lerRegistroInstituicao(tx, id));
+  // Representante consulta as outras instituições ("Consultar instituições e
+  // logos"), mas sem lista nominal nem contato interno de outra instituição.
+  if (ehGestao(u.papel) || u.instituicaoId === id) return registro;
+  return {
+    ...registro,
+    contatosComunicacao: '',
+    titular: '',
+    suplente: '',
+    motivoSaida: '',
+    somenteConsulta: true,
+  };
 }
 
 /**

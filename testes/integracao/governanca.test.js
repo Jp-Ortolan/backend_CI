@@ -335,6 +335,29 @@ describe('documentos por escopo', { skip: !rodar }, () => {
   });
 });
 
+describe('representante consultando outra instituição', { skip: !rodar }, () => {
+  test('ficha sem nomes de representantes nem contatos internos', async () => {
+    const r = await obterGovernancaInstituicao(reprOutra, instA);
+    assert.equal(r.somenteConsulta, true);
+    assert.equal(r.titular, '');
+    assert.equal(r.suplente, '');
+    assert.equal(r.contatosComunicacao, '');
+    assert.equal(r.nomeFantasia, `Gov A ${MARCA}`);
+    const propria = await obterGovernancaInstituicao(repr, instA);
+    assert.ok(propria.titular);
+    assert.equal(propria.somenteConsulta, undefined);
+  });
+
+  test('documentos: só os visíveis a membros, sem botão de envio', async () => {
+    await db.query(
+      `insert into documento (nome, tipo, url_externa, instituicao_id, visibilidade, status_analise)
+       values ('Folder público', 'material', 'https://exemplo.br/folder.pdf', $1, 'membros', 'aprovado')`, [instA]);
+    const l = await listarDocumentosDoEscopo(reprOutra, { dono: 'instituicao', id: instA }, BASE);
+    assert.equal(l.podeEnviar, false);
+    assert.deepEqual(l.dados.map((d) => d.nome), ['Folder público']);
+  });
+});
+
 describe('contas, notificações, auditoria e observações', { skip: !rodar }, () => {
   test('contas: só o admin; papéis canônicos; concorrência por versão', async () => {
     await assert.rejects(() => listarContas(diretoria), codigo('SEM_PERMISSAO'));
