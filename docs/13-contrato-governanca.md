@@ -33,7 +33,7 @@ Prefixo `/api/governanca`. ● gestão (admin + Diretoria) · A só admin · R r
 | Rota | Quem | Observação |
 |---|---|---|
 | `GET /publico` | P | Indicadores (desconhecido = `null`), instituições e logos **autorizadas e aprovadas**, Diretoria, calendário, documentos, canais |
-| `GET/PATCH /instituicoes/:id/governanca` | ● / PATCH só A | A Diretoria muda a ficha aprovando solicitações |
+| `GET/PATCH /instituicoes/:id/governanca` | ●, R (GET) / PATCH só A | A Diretoria muda a ficha aprovando solicitações. Representante consultando outra instituição recebe `somenteConsulta: true`, sem titular, suplente e contatos internos |
 | `GET/PATCH /representantes/:id/governanca` | ● | `:id` = pessoa. Intervalo invertido, ofício de outra instituição e conta de outra instituição são recusados; ligar conta só A |
 | `GET/PATCH /reunioes/:id/governanca` | ● (GET também R) | Tipo, número, ata, convocadas (IDs), encaminhamentos em texto. `encerrada` lança as ausências |
 | `GET /eventos`, `GET /eventos/:id` | ●, R | Envelope `evento` |
@@ -47,7 +47,7 @@ Prefixo `/api/governanca`. ● gestão (admin + Diretoria) · A só admin · R r
 | `POST /minha-instituicao/convocacoes/:id/resposta` | R | Confirmar exige representante ativo; recusar exige justificativa. RSVP não é presença |
 | `GET /solicitacoes` | ● | Com `resumo`, `comparacao` e `documentos` (links assinados) |
 | `POST /solicitacoes/:id/decisao` | ● | `aprovar` aplica a operação do tipo na mesma transação; `rejeitar` exige parecer → `ajustes_solicitados` |
-| `GET/POST /{escopo}/documentos` | ●, R na própria | escopo = `minha-instituicao`, `instituicoes/:id`, `reunioes/:id`, `eventos/:id`. PDF/PNG/JPEG ≤ 10 MB conferidos pelos bytes; logo só PNG/JPEG. Enviado pela instituição fica `em_analise` |
+| `GET/POST /{escopo}/documentos` | ●, R (GET de outra instituição: só os visíveis a membros; POST só na própria) | escopo = `minha-instituicao`, `instituicoes/:id`, `reunioes/:id`, `eventos/:id`. PDF/PNG/JPEG ≤ 10 MB conferidos pelos bytes; logo só PNG/JPEG. Enviado pela instituição fica `em_analise` |
 | `GET /arquivos/:token` | P (token) | Documento ou relatório. O RLS é conferido de novo com a conta do token |
 | `GET /{reunioes\|eventos}/:id/credenciamento` | ●, R (lista só da própria) | QR, link de check-in, percentual, seletores, `registroOfflineHabilitado` |
 | `POST …/credenciamento/abrir` | ● | `{ inicio, fim, permiteConvidados }` local. Gera token novo (o QR antigo para de valer) |
