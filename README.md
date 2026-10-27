@@ -186,12 +186,13 @@ O detalhe arquivo por arquivo está em
 | Autenticação e contas | `usuario`, `sessao`, `token_recuperacao` |
 | Instituições | `instituicao`, `area_atuacao` |
 | Representantes e vínculos | `representante`, `vinculo` |
-| Reuniões e eventos | `reuniao` (com `natureza`), `tipo_atividade`, `reuniao_convite`, `encaminhamento` |
+| Reuniões e eventos | `reuniao` (com `natureza`), `tipo_atividade`, `reuniao_convite`, `encaminhamento`, `convocacao` |
 | Fórum | `vertente`, `grupo_trabalho`, `solicitacao`, `configuracao` |
 | Presenças e check-in | `presenca`, `checkin_tentativa` |
 | Documentos | `documento`, `documento_conteudo` |
 | Indicadores | views `vw_*` |
-| Auditoria e notificações | `log_auditoria`, `notificacao` |
+| Auditoria e notificações | `log_auditoria`, `notificacao`, `instituicao_observacao` |
+| Contrato `/api/governanca` | `operacao_idempotente`, `relatorio_gerado`, `importacao_previa`, `importacao` |
 
 ## Perfis de acesso
 
@@ -293,6 +294,7 @@ um estado diferente, e a diferença só aparece em produção.
 | [Alinhamento com o front](docs/07-alinhamento-modelo-front.md) | Back-end e Front-end |
 | [Replanejamento de setembro](docs/08-replanejamento-setembro.md) | Todos |
 | [Revisão de outubro: perfis, eventos, QR, painel público](docs/12-revisao-outubro.md) | Todos — **o que mudou e o que falta no front** |
+| [Contrato /api/governanca (front de 26/10)](docs/13-contrato-governanca.md) | Back-end e Front-end — **rotas, regras e como homologar** |
 | [Operação: log, saúde, backup](docs/09-operacao.md) | DevOps |
 | [Plano de testes](qa/01-plano-de-testes.md) | QA |
 | [Casos de teste](qa/02-casos-de-teste.md) | QA |

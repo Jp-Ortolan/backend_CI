@@ -35,6 +35,10 @@ import {
   obterOrganizacao, convocar, salvarEncaminhamento, convocacoesDaInstituicao, responderConvocacao,
 } from './organizacao.js';
 import { abrirCheckin, confirmarCheckin } from './checkin.js';
+import { gerarRelatorio, baixarRelatorio } from './relatorios.js';
+import {
+  listarImportacoes, validarImportacao, confirmarImportacao, LIMITE_IMPORTACAO_BYTES,
+} from './importacoes.js';
 import { exigirDentroDoLimite, ipDaRequisicao } from '@/infraestrutura/http/limite.js';
 
 // ------------------------------------------------------------------- público
@@ -43,11 +47,12 @@ registrar('GET', 'publico', async (c) => okV1(await painelGovernanca(c.base)));
 // ------------------------------------------------- download por link assinado
 registrar('GET', 'arquivos/:token', async (c) => {
   const t = verificar(c.p.token);
-  if (!t || t.t !== 'doc' || !t.u) {
-    throw new ErroDeNegocio('NAO_AUTENTICADO', 'Este link venceu. Abra o documento de novo pelo sistema.');
+  if (!t || !['doc', 'rel'].includes(t.t) || !t.u) {
+    throw new ErroDeNegocio('NAO_AUTENTICADO', 'Este link venceu. Abra o arquivo de novo pelo sistema.');
   }
-  const doc = await baixarDocumento(await usuarioPorId(t.u), t.id);
-  return respostaDeArquivo({ ...doc, inline: doc.mimeType === 'application/pdf' || doc.mimeType.startsWith('image/') });
+  const dono = await usuarioPorId(t.u);
+  const arq = t.t === 'rel' ? await baixarRelatorio(dono, t.id) : await baixarDocumento(dono, t.id);
+  return respostaDeArquivo({ ...arq, inline: arq.mimeType === 'application/pdf' || arq.mimeType.startsWith('image/') });
 });
 
 // -------------------------------------------------- fichas de governança
@@ -176,3 +181,20 @@ registrar('GET', 'qr/:token', async (c) => {
     },
   });
 });
+
+// ======================================================= relatórios e importação (016)
+registrar('POST', 'minha-instituicao/relatorios', async (c) =>
+  okV1(await gerarRelatorio(await c.usuario(),
+    { tipo: 'minha-instituicao', instituicaoPedida: c.consulta.get('instituicaoId') }, await c.json(), c.base)));
+for (const prefixo of /** @type {const} */ (['reunioes', 'eventos'])) {
+  registrar('POST', `${prefixo}/:id/relatorios`, async (c) =>
+    okV1(await gerarRelatorio(await c.usuario(), { tipo: prefixo, id: c.p.id }, await c.json(), c.base)));
+}
+
+registrar('GET', 'importacoes', async (c) => okV1(await listarImportacoes(await c.usuario())));
+registrar('POST', 'importacoes/validar', async (c) => {
+  const { campos, arquivo } = await c.multipart(LIMITE_IMPORTACAO_BYTES);
+  return okV1(await validarImportacao(await c.usuario(), campos.tipo, arquivo));
+});
+registrar('POST', 'importacoes/confirmar', async (c) =>
+  confirmadoV1(await confirmarImportacao(await c.usuario(), await c.json())));
