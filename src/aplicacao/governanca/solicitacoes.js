@@ -16,7 +16,7 @@ import { decidirSolicitacao } from '@/aplicacao/solicitacoes/decidir-solicitacao
 import { ROTULO_SOLICITACAO } from '@/aplicacao/solicitacoes/esquemas.js';
 import { lerRegistroInstituicao, compararInstituicao } from './instituicao-registro.js';
 import {
-  linkDocumento, presencaContrato, representacaoContrato, situacaoSolicitacaoContrato,
+  isoComFuso, linkDocumento, presencaContrato, representacaoContrato, situacaoSolicitacaoContrato,
 } from './comum.js';
 
 /** @typedef {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} Usuario */
@@ -91,11 +91,14 @@ async function detalhar(tx, u, base, s, fichas) {
         'select status, modo from presenca where reuniao_id = $1 and pessoa_id = $2', [d.reuniaoId, d.pessoaId]);
       if (r) resumo.push({ rotulo: 'Atividade', valor: `${r.titulo} (${r.data})` });
       if (p) resumo.push({ rotulo: 'Participante', valor: p.nome });
-      const antes = presencaContrato(atual?.status ?? 'ausente');
+      // Decidida: o "antes" é o que estava gravado no pedido, não o valor já corrigido.
+      const antes = s.status !== 'pendente' && d.antes?.statusPresenca
+        ? d.antes.statusPresenca : presencaContrato(atual?.status ?? 'ausente');
       const depois = presencaContrato(d.status);
       alteracoes = { statusPresenca: depois, modalidade: d.modo ?? null };
       comparacao = [{ rotulo: 'Presença', antes: ROTULO_PRESENCA[antes] ?? antes, depois: ROTULO_PRESENCA[depois] ?? depois }];
-      if (d.modo) comparacao.push({ rotulo: 'Modalidade', antes: atual?.modo ?? null, depois: d.modo });
+      const modoAntes = s.status !== 'pendente' && d.antes ? d.antes.modalidade ?? null : atual?.modo ?? null;
+      if (d.modo) comparacao.push({ rotulo: 'Modalidade', antes: modoAntes, depois: d.modo });
       break;
     }
     case 'substituicao_representante':
@@ -151,10 +154,10 @@ async function detalhar(tx, u, base, s, fichas) {
     justificativa: s.justificativa,
     alteracoes,
     versaoRegistro: Number(s.versao_registro),
-    criadoEm: s.created_at,
+    criadoEm: isoComFuso(s.created_at),
     solicitadoPor: s.autor_nome ?? null,
     analisadoPor: s.analista_nome ?? null,
-    analisadoEm: s.analisado_em ?? null,
+    analisadoEm: isoComFuso(s.analisado_em),
     parecer: s.resposta ?? null,
     resumo,
     comparacao,

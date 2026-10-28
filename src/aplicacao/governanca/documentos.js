@@ -17,7 +17,7 @@ import { exigir } from '@/aplicacao/guarda.js';
 import { enviarDocumento } from '@/aplicacao/documentos/enviar-documento.js';
 import { definirLogo } from '@/aplicacao/instituicoes/logo.js';
 import { instituicaoDaSessao } from './minha-instituicao.js';
-import { linkDocumento } from './comum.js';
+import { isoComFuso, linkDocumento } from './comum.js';
 
 /** @typedef {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} Usuario */
 /** @typedef {{ dono: 'instituicao'|'reuniao', id: string, natureza?: 'reuniao'|'evento' }} Escopo */
@@ -111,7 +111,7 @@ export async function listarDocumentosDoEscopo(usuario, escopo, base) {
           id: atual.id,
           versaoArquivo: Number(atual.versao),
           status: atual.status_analise,
-          enviadaEm: atual.created_at,
+          enviadaEm: isoComFuso(atual.created_at),
           autorNome: atual.autor_nome ?? null,
           downloadUrl: link(atual),
         });
@@ -124,7 +124,7 @@ export async function listarDocumentosDoEscopo(usuario, escopo, base) {
         status: l.status_analise,
         mimeType: l.mime_type,
         tamanhoBytes: l.tamanho_bytes === null ? null : Number(l.tamanho_bytes),
-        enviadoEm: l.created_at,
+        enviadoEm: isoComFuso(l.created_at),
         autorNome: l.autor_nome ?? null,
         downloadUrl: link(l),
         versoes,

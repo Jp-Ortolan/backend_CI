@@ -247,6 +247,11 @@ describe('área da instituição e aprovação', { skip: !rodar }, () => {
     });
     const d = await decidirPeloContrato(diretoria, r.solicitacao.id, { decisao: 'aprovar' });
     assert.equal(d.solicitacao.status, 'aprovada');
+    // Decidida: o quadro mostra o valor de ANTES da decisão, não o já corrigido.
+    const item = (await filaDeSolicitacoes(diretoria, BASE)).dados.find((x) => x.id === r.solicitacao.id);
+    assert.equal(item.comparacao[0].antes, 'Ausente');
+    assert.equal(item.comparacao[0].depois, 'Ausência justificada');
+    assert.match(item.criadoEm, /-03:00$/);
     const depois = await presencasDaInstituicao(repr);
     assert.ok(depois.dados.some((p) => p.atividadeTitulo === `Reunião Gov ${MARCA}` && p.statusPresenca === 'justificada'));
   });
