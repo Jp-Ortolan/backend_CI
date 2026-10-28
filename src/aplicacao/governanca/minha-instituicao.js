@@ -115,7 +115,7 @@ export async function minhaInstituicao(usuario, instituicaoPedida) {
         id: s.id,
         tipo: s.tipo,
         status: situacaoSolicitacaoContrato(s.status),
-        criadoEm: s.created_at,
+        criadoEm: isoComFuso(s.created_at),
         parecer: s.resposta ?? null,
       })),
     };

@@ -87,6 +87,11 @@ export async function consultarAuditoria(usuario, filtros) {
       add(`exists (select 1 from reuniao rr where rr.id::text = l.registro_id and rr.natureza = ?::natureza_atividade)`, r.natureza);
     }
   }
+  // Entradas antigas que só registravam login (ultimo_login): não são
+  // alteração de cadastro. Desde a 017 elas nem são mais gravadas.
+  cond.push(`not (l.entidade = 'usuario' and l.acao = 'atualizacao' and l.alteracoes is not null
+              and not exists (select 1 from jsonb_object_keys(l.alteracoes) k
+                               where k not in ('updated_at', 'nome_busca', 'ultimo_login', 'versao_registro')))`);
   if (f.autor) add(`imutavel_unaccent(lower(a.nome)) like '%' || imutavel_unaccent(lower(?)) || '%'`, f.autor);
   if (f.cursor) {
     const id = Number(Buffer.from(f.cursor, 'base64url').toString('utf8'));

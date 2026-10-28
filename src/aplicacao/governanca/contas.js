@@ -12,7 +12,7 @@ import { comUsuario } from '@/infraestrutura/banco/consulta.js';
 import { ErroDeNegocio } from '@/dominio/erros.js';
 import { exigir } from '@/aplicacao/guarda.js';
 import { listarUsuarios, criarUsuario, editarUsuario } from '@/aplicacao/usuarios/usuarios.js';
-import { PAPEL_CONTRATO, PAPEL_BANCO } from './comum.js';
+import { PAPEL_CONTRATO, PAPEL_BANCO, isoComFuso } from './comum.js';
 
 /** @typedef {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} Usuario */
 
@@ -26,7 +26,7 @@ const conta = (c) => ({
   instituicaoNome: c.instituicao?.nome ?? null,
   ativo: c.ativo,
   senhaDefinida: c.senhaDefinida,
-  ultimoLogin: c.ultimoLogin ?? null,
+  ultimoLogin: isoComFuso(c.ultimoLogin),
   versaoRegistro: c.versaoRegistro,
   ...(c.conviteEnviado !== undefined ? { conviteEnviado: c.conviteEnviado } : {}),
 });
