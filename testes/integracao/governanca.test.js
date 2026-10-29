@@ -18,7 +18,7 @@ import '@/aplicacao/governanca/rotas.js';
 import { painelGovernanca } from '@/aplicacao/governanca/publico.js';
 import {
   obterGovernancaInstituicao, salvarGovernancaInstituicao,
-  obterGovernancaRepresentante, salvarGovernancaRepresentante,
+  obterGovernancaRepresentante, salvarGovernancaRepresentante, anexarOficioRepresentante,
 } from '@/aplicacao/governanca/cadastros.js';
 import {
   minhaInstituicao, solicitarPelaInstituicao, presencasDaInstituicao, representantesDaInstituicao,
@@ -172,6 +172,28 @@ describe('fichas de governança', { skip: !rodar }, () => {
     const s = await salvarGovernancaRepresentante(diretoria, titularId, { cargoForum: 'Conselheiro', autorizaComunicacoes: true });
     assert.equal(s.cargoForum, 'Conselheiro');
     assert.equal(s.autorizaComunicacoes, true);
+  });
+
+  test('representante: ofício anexado pela ficha vira o ofício da indicação', async () => {
+    const pdf = { nome: 'oficio-indicacao.pdf', mime: 'application/pdf', conteudo: Buffer.concat([PDF, Buffer.from('oficio')]) };
+    await assert.rejects(() => anexarOficioRepresentante(repr, titularId, pdf, BASE), codigo('ALTERACAO_EXIGE_APROVACAO'));
+    const r = await anexarOficioRepresentante(diretoria, titularId, pdf, BASE);
+    assert.equal(r.oficio.nome, 'oficio-indicacao.pdf');
+    assert.equal(r.oficioId, r.oficio.id);
+    assert.match(r.oficio.downloadUrl, /^https:\/\/api\.exemplo\.br\/api\/governanca\/arquivos\//);
+    assert.ok(r.oficiosDisponiveis.some((o) => o.id === r.oficio.id));
+    const lido = await obterGovernancaRepresentante(diretoria, titularId, BASE);
+    assert.equal(lido.oficio.id, r.oficio.id);
+  });
+
+  test('instituição: a ficha traz o link da logo vigente', async () => {
+    const semLogo = await obterGovernancaInstituicao(admin, instA, BASE);
+    assert.equal(semLogo.logoUrl, null);
+    await enviarDocumentoDoEscopo(admin, { dono: 'instituicao', id: instA }, { tipo: 'logo' },
+      { nome: 'logo.png', mime: 'image/png', conteudo: Buffer.concat([PNG, Buffer.from('ficha')]) });
+    const comLogo = await obterGovernancaInstituicao(admin, instA, BASE);
+    assert.match(comLogo.logoUrl, /\/api\/governanca\/arquivos\//);
+    assert.equal(comLogo.logoEmAnalise, false);
   });
 
   test('representante: Diretoria não liga conta (só o admin)', async () => {

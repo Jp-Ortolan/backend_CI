@@ -15,7 +15,8 @@ import { exigir } from '@/aplicacao/guarda.js';
 import {
   lerRegistroInstituicao, aplicarRegistroInstituicao, compararInstituicao,
 } from './instituicao-registro.js';
-import { representacaoBanco, representacaoContrato } from './comum.js';
+import { linkDocumento, logoDaInstituicao, representacaoBanco, representacaoContrato } from './comum.js';
+import { enviarDocumentoDoEscopo } from './documentos.js';
 
 /** @typedef {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} Usuario */
 
@@ -33,10 +34,14 @@ function conferirVersao(enviada, atual) {
 /**
  * @param {Usuario|null} usuario
  * @param {string} id
+ * @param {string} [base]  endereço da API, para o link da logo
  */
-export async function obterGovernancaInstituicao(usuario, id) {
+export async function obterGovernancaInstituicao(usuario, id, base = '') {
   const u = exigir(usuario, 'instituicao', 'ver');
-  const registro = await comUsuario(u.id, (tx) => lerRegistroInstituicao(tx, id));
+  const registro = await comUsuario(u.id, async (tx) => ({
+    ...(await lerRegistroInstituicao(tx, id)),
+    ...(await logoDaInstituicao(tx, id, { base, uid: u.id })),
+  }));
   // Representante consulta as outras instituições ("Consultar instituições e
   // logos"), mas sem lista nominal nem contato interno de outra instituição.
   if (ehGestao(u.papel) || u.instituicaoId === id) return registro;
@@ -55,7 +60,7 @@ export async function obterGovernancaInstituicao(usuario, id) {
  * @param {string} id
  * @param {Record<string, any>} corpo  a ficha (inteira ou só o que mudou)
  */
-export async function salvarGovernancaInstituicao(usuario, id, corpo) {
+export async function salvarGovernancaInstituicao(usuario, id, corpo, base = '') {
   const u = exigir(usuario, 'instituicao', 'editar');
   if (u.papel !== 'admin') {
     throw new ErroDeNegocio('ALTERACAO_EXIGE_APROVACAO',
@@ -76,7 +81,7 @@ export async function salvarGovernancaInstituicao(usuario, id, corpo) {
         traduzirErroDoBanco(e);
       }
     }
-    return lerRegistroInstituicao(tx, id);
+    return { ...(await lerRegistroInstituicao(tx, id)), ...(await logoDaInstituicao(tx, id, { base, uid: u.id })) };
   });
 }
 
@@ -88,7 +93,7 @@ export async function salvarGovernancaInstituicao(usuario, id, corpo) {
  * @param {import('@/infraestrutura/banco/consulta.js').Transacao} tx
  * @param {string} pessoaId
  */
-async function lerRegistroRepresentante(tx, pessoaId) {
+async function lerRegistroRepresentante(tx, pessoaId, ctx = { base: '', uid: '' }) {
   const p = await tx.consultaUm('select id, nome, autoriza_comunicacao from pessoa where id = $1', [pessoaId]);
   if (!p) throw new ErroDeNegocio('NAO_ENCONTRADO', 'Representante não encontrado.');
 
@@ -105,6 +110,17 @@ async function lerRegistroRepresentante(tx, pessoaId) {
     [pessoaId]);
   const conta = await tx.consultaUm('select id from usuario where pessoa_id = $1', [pessoaId]).catch(() => null);
 
+  // O ofício que formalizou a indicação, e os ofícios da instituição para
+  // escolher (em vez de digitar um identificador).
+  const link = (docId) => (ctx.base ? linkDocumento(ctx.base, docId, ctx.uid) : null);
+  const oficio = v?.oficio_documento_id
+    ? await tx.consultaUm('select id, nome, status_analise from documento where id = $1', [v.oficio_documento_id])
+    : null;
+  const oficios = v ? await tx.consulta(
+    `select id, nome, status_analise, created_at from documento
+      where instituicao_id = $1 and tipo = 'oficio' and status_analise <> 'recusado'
+      order by created_at desc`, [v.instituicao_id]) : [];
+
   return {
     id: p.id,
     vinculoId: v?.id ?? null,
@@ -117,6 +133,8 @@ async function lerRegistroRepresentante(tx, pessoaId) {
     fim: v?.data_fim ?? '',
     motivoSubstituicao: v?.motivo_encerramento ?? '',
     oficioId: v?.oficio_documento_id ?? '',
+    oficio: oficio ? { id: oficio.id, nome: oficio.nome, status: oficio.status_analise, downloadUrl: link(oficio.id) } : null,
+    oficiosDisponiveis: oficios.map((o) => ({ id: o.id, nome: o.nome, status: o.status_analise, downloadUrl: link(o.id) })),
     usuarioId: conta?.id ?? '',
     autorizaComunicacoes: !!p.autoriza_comunicacao,
     versaoRegistro: v ? Number(v.versao_registro) : 1,
@@ -127,9 +145,9 @@ async function lerRegistroRepresentante(tx, pessoaId) {
  * @param {Usuario|null} usuario
  * @param {string} pessoaId
  */
-export async function obterGovernancaRepresentante(usuario, pessoaId) {
+export async function obterGovernancaRepresentante(usuario, pessoaId, base = '') {
   const u = exigir(usuario, 'representante', 'ver');
-  return comUsuario(u.id, (tx) => lerRegistroRepresentante(tx, pessoaId));
+  return comUsuario(u.id, (tx) => lerRegistroRepresentante(tx, pessoaId, { base, uid: u.id }));
 }
 
 const DATA = /^\d{4}-\d{2}-\d{2}$/;
@@ -139,7 +157,7 @@ const DATA = /^\d{4}-\d{2}-\d{2}$/;
  * @param {string} pessoaId
  * @param {Record<string, any>} corpo
  */
-export async function salvarGovernancaRepresentante(usuario, pessoaId, corpo) {
+export async function salvarGovernancaRepresentante(usuario, pessoaId, corpo, base = '') {
   const u = exigir(usuario, 'vinculo', 'editar');
   if (!ehGestao(u.papel)) {
     throw new ErroDeNegocio('ALTERACAO_EXIGE_APROVACAO',
@@ -265,6 +283,34 @@ export async function salvarGovernancaRepresentante(usuario, pessoaId, corpo) {
       traduzirErroDoBanco(e);
     }
 
-    return lerRegistroRepresentante(tx, pessoaId);
+    return lerRegistroRepresentante(tx, pessoaId, { base, uid: u.id });
+  });
+}
+
+/**
+ * Anexa o ofício de indicação na ficha do representante: o arquivo vai para
+ * os documentos da instituição do vínculo (tipo ofício) e passa a ser o
+ * ofício que formalizou a indicação. Só a gestão — a instituição envia o
+ * ofício pelo pedido de substituição.
+ *
+ * @param {Usuario|null} usuario
+ * @param {string} pessoaId
+ * @param {{ nome: string, mime: string, conteudo: Buffer }|null} arquivo
+ * @param {string} base
+ */
+export async function anexarOficioRepresentante(usuario, pessoaId, arquivo, base) {
+  if (usuario?.papel === 'representante') {
+    throw new ErroDeNegocio('ALTERACAO_EXIGE_APROVACAO',
+      'A instituição envia o ofício pelo pedido de substituição, na área da instituição.');
+  }
+  const u = exigir(usuario, 'vinculo', 'editar');
+  const atual = await comUsuario(u.id, (tx) => lerRegistroRepresentante(tx, pessoaId));
+  if (!atual.vinculoId) {
+    throw new ErroDeNegocio('VINCULO_INVALIDO', 'Esta pessoa não tem vínculo com nenhuma instituição. Crie o vínculo antes.');
+  }
+  const r = await enviarDocumentoDoEscopo(u, { dono: 'instituicao', id: atual.instituicaoId }, { tipo: 'oficio' }, arquivo);
+  return comUsuario(u.id, async (tx) => {
+    await tx.consulta('update vinculo set oficio_documento_id = $2 where id = $1', [atual.vinculoId, r.documento.id]);
+    return lerRegistroRepresentante(tx, pessoaId, { base, uid: u.id });
   });
 }
