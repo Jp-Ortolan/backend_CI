@@ -295,6 +295,7 @@ um estado diferente, e a diferença só aparece em produção.
 | [Replanejamento de setembro](docs/08-replanejamento-setembro.md) | Todos |
 | [Revisão de outubro: perfis, eventos, QR, painel público](docs/12-revisao-outubro.md) | Todos — **o que mudou e o que falta no front** |
 | [Contrato /api/governanca (front de 26/10)](docs/13-contrato-governanca.md) | Back-end e Front-end — **rotas, regras e como homologar** |
+| [Implantação no domínio oficial](docs/14-implantacao.md) | Quem vai hospedar e administrar — **comece por aqui** |
 | [Operação: log, saúde, backup](docs/09-operacao.md) | DevOps |
 | [Plano de testes](qa/01-plano-de-testes.md) | QA |
 | [Casos de teste](qa/02-casos-de-teste.md) | QA |

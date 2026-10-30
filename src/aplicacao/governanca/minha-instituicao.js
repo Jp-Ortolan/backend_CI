@@ -20,7 +20,7 @@ import {
   lerRegistroInstituicao, prepararRegistroInstituicao, compararInstituicao, CAMPOS_INSTITUICAO,
 } from './instituicao-registro.js';
 import {
-  presencaContrato, presencaBanco, representacaoContrato, situacaoSolicitacaoContrato, isoComFuso,
+  presencaContrato, presencaBanco, representacaoContrato, situacaoSolicitacaoContrato, isoComFuso, logoDaInstituicao,
 } from './comum.js';
 
 /** @typedef {import('@/infraestrutura/seguranca/sessao.js').UsuarioSessao} Usuario */
@@ -49,12 +49,12 @@ export function instituicaoDaSessao(u, pedida) {
  * @param {Usuario|null} usuario
  * @param {string|null} [instituicaoPedida]
  */
-export async function minhaInstituicao(usuario, instituicaoPedida) {
+export async function minhaInstituicao(usuario, instituicaoPedida, base = '') {
   const u = exigir(usuario, 'instituicao', 'ver');
   const id = instituicaoDaSessao(u, instituicaoPedida);
 
   return comUsuario(u.id, async (tx) => {
-    const instituicao = await lerRegistroInstituicao(tx, id);
+    const instituicao = { ...(await lerRegistroInstituicao(tx, id)), ...(await logoDaInstituicao(tx, id, { base, uid: u.id })) };
     const { versaoRegistro, ...ficha } = instituicao;
 
     // Regra oficial (a mesma do painel e dos relatórios): atividades que contam

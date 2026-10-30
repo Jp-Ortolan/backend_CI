@@ -33,8 +33,9 @@ Prefixo `/api/governanca`. ● gestão (admin + Diretoria) · A só admin · R r
 | Rota | Quem | Observação |
 |---|---|---|
 | `GET /publico` | P | Indicadores (desconhecido = `null`), instituições e logos **autorizadas e aprovadas**, Diretoria, calendário, documentos, canais |
-| `GET/PATCH /instituicoes/:id/governanca` | ●, R (GET) / PATCH só A | A Diretoria muda a ficha aprovando solicitações. Representante consultando outra instituição recebe `somenteConsulta: true`, sem titular, suplente e contatos internos |
-| `GET/PATCH /representantes/:id/governanca` | ● | `:id` = pessoa. Intervalo invertido, ofício de outra instituição e conta de outra instituição são recusados; ligar conta só A |
+| `GET/PATCH /instituicoes/:id/governanca` | ●, R (GET) / PATCH só A | A Diretoria muda a ficha aprovando solicitações. Representante consultando outra instituição recebe `somenteConsulta: true`, sem titular, suplente e contatos internos. A ficha traz `logoUrl` (link temporário da logo vigente) e `logoEmAnalise`; a logo é enviada em `POST /instituicoes/:id/documentos` com `tipo=logo` |
+| `GET/PATCH /representantes/:id/governanca` | ● | `:id` = pessoa. Intervalo invertido, ofício de outra instituição e conta de outra instituição são recusados; ligar conta só A. A ficha traz `oficio` ({id, nome, status, downloadUrl}) e `oficiosDisponiveis` (ofícios da instituição, para escolher em vez de digitar o id) |
+| `POST /representantes/:id/oficio` | ● | multipart `arquivo` (PDF/PNG/JPEG ≤ 10 MB). Vai para os documentos da instituição do vínculo como ofício e vira o ofício da indicação. Resposta: `{ registro }` atualizado |
 | `GET/PATCH /reunioes/:id/governanca` | ● (GET também R) | Tipo, número, ata, convocadas (IDs), encaminhamentos em texto. `encerrada` lança as ausências |
 | `GET /eventos`, `GET /eventos/:id` | ●, R | Envelope `evento` |
 | `GET /eventos/configuracao` | ● | Categorias e situações |

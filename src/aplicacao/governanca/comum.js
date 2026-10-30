@@ -75,3 +75,24 @@ export function isoComFuso(v) {
   const d = new Date(new Date(v).getTime() - 3 * 3600_000);
   return `${d.toISOString().slice(0, 19)}-03:00`;
 }
+
+/**
+ * Logo da instituição para a ficha: o link (temporário) da logo vigente e se
+ * há uma logo nova esperando a Diretoria. Sem permissão de ver o arquivo
+ * (logo interna de outra instituição), o link vem null.
+ *
+ * @param {import('@/infraestrutura/banco/consulta.js').Transacao} tx
+ * @param {string} id
+ * @param {{ base: string, uid: string }} ctx
+ */
+export async function logoDaInstituicao(tx, id, ctx) {
+  const atual = await tx.consultaUm(
+    `select d.id from instituicao i join documento d on d.id = i.logo_documento_id where i.id = $1`, [id]);
+  const pendente = await tx.consultaUm(
+    `select id from documento where instituicao_id = $1 and tipo = 'logo' and status_analise = 'em_analise'
+      order by created_at desc limit 1`, [id]);
+  return {
+    logoUrl: atual && ctx.base ? linkDocumento(ctx.base, atual.id, ctx.uid) : null,
+    logoEmAnalise: !!pendente,
+  };
+}

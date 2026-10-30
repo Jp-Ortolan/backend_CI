@@ -11,7 +11,7 @@ import { baixarDocumento } from '@/aplicacao/documentos/baixar-documento.js';
 import { painelGovernanca } from './publico.js';
 import {
   obterGovernancaInstituicao, salvarGovernancaInstituicao,
-  obterGovernancaRepresentante, salvarGovernancaRepresentante,
+  obterGovernancaRepresentante, salvarGovernancaRepresentante, anexarOficioRepresentante,
 } from './cadastros.js';
 import {
   minhaInstituicao, solicitarPelaInstituicao, presencasDaInstituicao, representantesDaInstituicao,
@@ -57,17 +57,21 @@ registrar('GET', 'arquivos/:token', async (c) => {
 
 // -------------------------------------------------- fichas de governança
 registrar('GET', 'instituicoes/:id/governanca', async (c) =>
-  okV1({ registro: await obterGovernancaInstituicao(await c.usuario(), c.p.id) }));
+  okV1({ registro: await obterGovernancaInstituicao(await c.usuario(), c.p.id, c.base) }));
 registrar('PATCH', 'instituicoes/:id/governanca', async (c) =>
-  confirmadoV1({ registro: await salvarGovernancaInstituicao(await c.usuario(), c.p.id, await c.json()) }));
+  confirmadoV1({ registro: await salvarGovernancaInstituicao(await c.usuario(), c.p.id, await c.json(), c.base) }));
 registrar('GET', 'representantes/:id/governanca', async (c) =>
-  okV1({ registro: await obterGovernancaRepresentante(await c.usuario(), c.p.id) }));
+  okV1({ registro: await obterGovernancaRepresentante(await c.usuario(), c.p.id, c.base) }));
 registrar('PATCH', 'representantes/:id/governanca', async (c) =>
-  confirmadoV1({ registro: await salvarGovernancaRepresentante(await c.usuario(), c.p.id, await c.json()) }));
+  confirmadoV1({ registro: await salvarGovernancaRepresentante(await c.usuario(), c.p.id, await c.json(), c.base) }));
+registrar('POST', 'representantes/:id/oficio', async (c) => {
+  const { arquivo } = await c.multipart(LIMITE_DOCUMENTO_BYTES);
+  return confirmadoV1({ registro: await anexarOficioRepresentante(await c.usuario(), c.p.id, arquivo, c.base) }, 201);
+});
 
 // ------------------------------------------------------ área da instituição
 registrar('GET', 'minha-instituicao', async (c) =>
-  okV1(await minhaInstituicao(await c.usuario(), c.consulta.get('instituicaoId'))));
+  okV1(await minhaInstituicao(await c.usuario(), c.consulta.get('instituicaoId'), c.base)));
 registrar('POST', 'minha-instituicao/solicitacoes', async (c) =>
   confirmadoV1(await solicitarPelaInstituicao(await c.usuario(), await c.json()), 201));
 registrar('GET', 'minha-instituicao/presencas', async (c) =>
